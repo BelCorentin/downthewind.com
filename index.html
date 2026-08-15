@@ -24,12 +24,15 @@
 
   .spot-btn {
     width:100%; text-align:left; background:none; border:1px solid var(--line); border-radius:10px;
-    color:var(--fg); padding: .8rem 1rem; margin-bottom:.6rem; cursor:pointer; font:inherit;
+    color:var(--fg); padding:.8rem 1rem; margin-bottom:.6rem; cursor:pointer; font:inherit;
     transition:border-color .2s;
   }
   .spot-btn:hover, .spot-btn.active { border-color:var(--sea); }
   .spot-btn .n { font-weight:600; }
   .spot-btn .a { color:var(--faint); font-size:.8rem; margin-top:.15rem; }
+
+  #backBtn { display:none; background:none; border:none; color:var(--sea-bright); cursor:pointer; font:inherit; font-size:.85rem; padding:0; margin-bottom:1rem; }
+  #backBtn:hover { text-decoration:underline; }
 
   #detail { margin-top:1.4rem; display:none; }
   #detail h2 { font-size:1.2rem; font-weight:650; }
@@ -53,9 +56,39 @@
   .fc .src { color:var(--faint); font-size:.7rem; margin-top:.6rem; }
   .fc .src a { color:var(--faint); }
 
+  #mapwrap { position:relative; height:100%; }
   #map { height:100%; z-index:1; }
+  #overlayCanvas { position:absolute; inset:0; z-index:400; pointer-events:none; }
   .leaflet-container { background:#0a0e14; }
-  footer.credit { position:absolute; bottom:.5rem; right:.6rem; z-index:500; color:#525b70; font-size:.72rem; }
+
+  /* overlay controls */
+  #layerCtl {
+    position:absolute; top:.8rem; right:.8rem; z-index:500; display:flex; gap:.4rem;
+  }
+  #layerCtl button {
+    background:rgba(14,19,28,.9); border:1px solid var(--line); color:var(--dim);
+    border-radius:8px; padding:.45rem .8rem; cursor:pointer; font:inherit; font-size:.85rem;
+  }
+  #layerCtl button.on { color:var(--sea-bright); border-color:var(--sea); }
+  #timeCtl {
+    position:absolute; left:50%; bottom:1.2rem; transform:translateX(-50%);
+    z-index:500; display:none; align-items:center; gap:.7rem;
+    background:rgba(14,19,28,.92); border:1px solid var(--line); border-radius:10px;
+    padding:.55rem .9rem; width:min(560px, 90%);
+  }
+  #timeCtl button { background:none; border:none; color:var(--sea-bright); font-size:1rem; cursor:pointer; }
+  #timeCtl input[type=range] { flex:1; accent-color:var(--sea); }
+  #timeCtl #timeLbl { color:var(--dim); font-size:.8rem; white-space:nowrap; min-width:7.5rem; text-align:right; }
+  #ovLegend {
+    position:absolute; left:.8rem; bottom:1.2rem; z-index:500; display:none;
+    background:rgba(14,19,28,.92); border:1px solid var(--line); border-radius:8px;
+    padding:.5rem .7rem; color:var(--faint); font-size:.7rem; width:170px;
+  }
+  #ovLegend .bar { height:8px; border-radius:4px; margin:.3rem 0;
+    background:linear-gradient(to right, #14313b, #2b6f70, #55b3a8, #8ceedd); }
+  #ovLegend .ends { display:flex; justify-content:space-between; }
+  .spot-icon { font-size:22px; text-shadow:0 0 6px #000; }
+  footer.credit { position:absolute; bottom:.35rem; right:.5rem; z-index:500; color:#525b70; font-size:.7rem; }
   footer.credit a { color:#525b70; }
 </style>
 </head>
@@ -65,6 +98,7 @@
     <h1>down<b>the</b>wind</h1>
     <div class="sub">Wing &amp; SUP-foil downwind runs in France. Pick a run, check the wind, send it.
       By <a href="https://corentinbel.com" style="color:var(--dim)">Corentin Bel</a>.</div>
+    <button id="backBtn" onclick="backToFrance()">← all runs</button>
     <div id="spotList"></div>
     <div id="detail">
       <h2 id="dName"></h2>
@@ -80,32 +114,49 @@
       </div>
     </div>
   </aside>
-  <div id="map"></div>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <canvas id="overlayCanvas"></canvas>
+    <div id="layerCtl">
+      <button id="btnWind" onclick="setMode('wind')">💨 wind</button>
+      <button id="btnWaves" onclick="setMode('waves')">🌊 waves</button>
+    </div>
+    <div id="timeCtl">
+      <button id="playBtn" onclick="togglePlay()">▶</button>
+      <input type="range" id="timeSlider" min="0" max="95" value="0">
+      <span id="timeLbl"></span>
+    </div>
+    <div id="ovLegend">
+      <div id="ovLegendTitle">wind speed</div>
+      <div class="bar"></div>
+      <div class="ends"><span id="legLo">0 kn</span><span id="legHi">35+ kn</span></div>
+    </div>
+    <footer class="credit">tiles © <a href="https://carto.com/attributions">CARTO</a> · © <a href="https://www.openstreetmap.org/copyright">OSM</a> · forecast © <a href="https://open-meteo.com">Open-Meteo</a></footer>
+  </div>
 </div>
-<footer class="credit">tiles © <a href="https://carto.com/attributions">CARTO</a> · © <a href="https://www.openstreetmap.org/copyright">OSM</a></footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="spots.js"></script>
 <script>
-/* ---------------- map ---------------- */
-const map = L.map("map", { zoomControl: true }).setView([46.5, 2.5], 6);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-  maxZoom: 18, attribution: ""
-}).addTo(map);
+/* ================= map & spots ================= */
+const FRANCE = { center: [46.4, 2.6], zoom: 6 };
+const map = L.map("map", { zoomControl: true }).setView(FRANCE.center, FRANCE.zoom);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(map);
 
-const layers = {};
+const layers = {}, markers = {};
 for (const s of SPOTS) {
   const line = L.polyline(s.track, { color: "#8ceedd", weight: 3, opacity: .9, dashArray: "1 7", lineCap: "round" });
-  const start = L.circleMarker(s.track[0], { radius: 6, color: "#8ceedd", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 })
-    .bindTooltip("Start — " + s.track.length + " waypoints", { direction: "top" });
-  const end = L.circleMarker(s.track[s.track.length - 1], { radius: 6, color: "#e8a3ff", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 })
-    .bindTooltip("Finish", { direction: "top" });
-  const grp = L.featureGroup([line, start, end]).addTo(map);
+  const start = L.circleMarker(s.track[0], { radius: 6, color: "#8ceedd", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 }).bindTooltip("Start", { direction: "top" });
+  const end = L.circleMarker(s.track.at(-1), { radius: 6, color: "#e8a3ff", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 }).bindTooltip("Finish", { direction: "top" });
+  const grp = L.featureGroup([line, start, end]);
   grp.on("click", () => select(s.id));
   layers[s.id] = grp;
+  markers[s.id] = L.marker(s.track[0], {
+    icon: L.divIcon({ className: "spot-icon", html: "🏄", iconSize: [26, 26], iconAnchor: [13, 13] })
+  }).bindTooltip(`${s.name} · ${s.distanceKm} km`, { direction: "top" })
+    .on("click", () => select(s.id)).addTo(map);
 }
 
-/* ---------------- sidebar ---------------- */
 const listEl = document.getElementById("spotList");
 listEl.innerHTML = SPOTS.map(s => `
   <button class="spot-btn" id="btn-${s.id}" onclick="select('${s.id}')">
@@ -117,18 +168,26 @@ function select(id) {
   const s = SPOTS.find(x => x.id === id);
   document.querySelectorAll(".spot-btn").forEach(b => b.classList.toggle("active", b.id === "btn-" + id));
   document.getElementById("detail").style.display = "block";
+  document.getElementById("backBtn").style.display = "block";
   document.getElementById("dName").textContent = s.name;
   document.getElementById("dMeta").innerHTML =
     `<b>${s.distanceKm} km</b> · ${s.windName}, ${s.wind.idealMin}–${s.wind.idealMax} kn ideal<br>${s.level}`;
   document.getElementById("dDesc").textContent = s.description;
   document.getElementById("dTips").innerHTML = s.tips.map(t => `<li>${t}</li>`).join("");
-  map.fitBounds(layers[id].getBounds(), { padding: [40, 40] });
+  Object.values(layers).forEach(l => map.removeLayer(l));
+  layers[id].addTo(map);
+  map.fitBounds(layers[id].getBounds(), { padding: [50, 50] });
   loadForecast(s);
 }
+function backToFrance() {
+  document.querySelectorAll(".spot-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("detail").style.display = "none";
+  document.getElementById("backBtn").style.display = "none";
+  Object.values(layers).forEach(l => map.removeLayer(l));
+  map.flyTo(FRANCE.center, FRANCE.zoom);
+}
 
-/* ---------------- forecast: AROME via Open-Meteo, client-side ---------------- */
-
-// sequential ramp, single teal hue, dark-anchored: low = near-surface, high = bright
+/* ================= shared color ramp (sequential, single teal hue) ================= */
 const RAMP = [[0x14,0x31,0x3b],[0x2b,0x6f,0x70],[0x55,0xb3,0xa8],[0x8c,0xee,0xdd]];
 function rampColor(t) {
   t = Math.max(0, Math.min(1, t));
@@ -137,8 +196,186 @@ function rampColor(t) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
+/* ================= weather overlay: wind particles / wave arrows + time slider ================= */
+const cv = document.getElementById("overlayCanvas"), ctx = cv.getContext("2d");
+let mode = null, hour = 0, playing = false, playTimer = null;
+let windGrid = null, waveGrid = null;   // { lats[], lons[], pts: [ {sp[],dir[],per[]} ] , time[] }
+const GRID_N = 10, BBOX = { lat0: 41.0, lat1: 51.5, lon0: -5.5, lon1: 9.5 };
+
+function gridCoords() {
+  const lats = [], lons = [];
+  for (let i = 0; i < GRID_N; i++) {
+    lats.push(BBOX.lat0 + (BBOX.lat1 - BBOX.lat0) * i / (GRID_N - 1));
+    lons.push(BBOX.lon0 + (BBOX.lon1 - BBOX.lon0) * i / (GRID_N - 1));
+  }
+  const la = [], lo = [];
+  for (const a of lats) for (const o of lons) { la.push(a.toFixed(2)); lo.push(o.toFixed(2)); }
+  return { lats, lons, la, lo };
+}
+
+async function fetchWindGrid() {
+  const g = gridCoords();
+  const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${g.la.join(",")}&longitude=${g.lo.join(",")}` +
+    `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=4&timezone=UTC`;
+  const arr = await (await fetch(url)).json();
+  return { lats: g.lats, lons: g.lons, time: arr[0].hourly.time,
+    pts: arr.map(p => ({ sp: p.hourly.wind_speed_10m, dir: p.hourly.wind_direction_10m })) };
+}
+async function fetchWaveGrid() {
+  const g = gridCoords();
+  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${g.la.join(",")}&longitude=${g.lo.join(",")}` +
+    `&hourly=wave_height,wave_direction,wave_period&forecast_days=4&timezone=UTC`;
+  const arr = await (await fetch(url)).json();
+  return { lats: g.lats, lons: g.lons, time: arr[0].hourly.time,
+    pts: arr.map(p => ({ sp: p.hourly.wave_height, dir: p.hourly.wave_direction, per: p.hourly.wave_period })) };
+}
+
+// bilinear interpolation of (speed, dir) at lat/lon for current hour — wind only
+function windAt(lat, lon) {
+  const g = windGrid;
+  if (!g || lat < BBOX.lat0 || lat > BBOX.lat1 || lon < BBOX.lon0 || lon > BBOX.lon1) return null;
+  const fi = (lat - BBOX.lat0) / (BBOX.lat1 - BBOX.lat0) * (GRID_N - 1);
+  const fj = (lon - BBOX.lon0) / (BBOX.lon1 - BBOX.lon0) * (GRID_N - 1);
+  const i = Math.min(GRID_N - 2, Math.floor(fi)), j = Math.min(GRID_N - 2, Math.floor(fj));
+  const di = fi - i, dj = fj - j;
+  // interpolate u/v components to avoid 359°→0° seams
+  let u = 0, v = 0;
+  for (const [ii, jj, w] of [[i,j,(1-di)*(1-dj)],[i+1,j,di*(1-dj)],[i,j+1,(1-di)*dj],[i+1,j+1,di*dj]]) {
+    const p = g.pts[ii * GRID_N + jj], s = p.sp[hour], d = p.dir[hour] * Math.PI / 180;
+    if (s == null) return null;
+    u += -Math.sin(d) * s * w; v += -Math.cos(d) * s * w;
+  }
+  return { u, v, s: Math.hypot(u, v) };
+}
+
+/* particles */
+let parts = [];
+function resizeCanvas() {
+  cv.width = cv.clientWidth * devicePixelRatio;
+  cv.height = cv.clientHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  parts = [];
+  if (mode === "waves") drawWaves();
+}
+addEventListener("resize", resizeCanvas);
+map.on("moveend zoomend", () => { parts = []; if (mode === "waves") drawWaves(); });
+map.on("move zoom", () => { if (mode === "waves") drawWaves(); });
+
+function spawn() {
+  return { x: Math.random() * cv.clientWidth, y: Math.random() * cv.clientHeight, life: 40 + Math.random() * 80 };
+}
+function stepWind() {
+  if (mode !== "wind") return;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  while (parts.length < 1400) parts.push(spawn());
+  // fade previous frame
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "rgba(0,0,0,0.07)";
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = "source-over";
+  for (const p of parts) {
+    const ll = map.containerPointToLatLng([p.x, p.y]);
+    const f = windAt(ll.lat, ll.lng);
+    if (!f || p.life-- < 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) { Object.assign(p, spawn()); continue; }
+    const k = 0.05 + map.getZoom() * 0.012;
+    const nx = p.x + f.u * k, ny = p.y - f.v * k;
+    ctx.strokeStyle = rampColor(f.s / 35);
+    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
+    p.x = nx; p.y = ny;
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(stepWind);
+}
+
+function drawWaves() {
+  if (mode !== "waves" || !waveGrid) return;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  const g = waveGrid;
+  for (let i = 0; i < GRID_N; i++) for (let j = 0; j < GRID_N; j++) {
+    const p = g.pts[i * GRID_N + j];
+    const hgt = p.sp[hour];
+    if (hgt == null) continue;                     // land point
+    const pt = map.latLngToContainerPoint([g.lats[i], g.lons[j]]);
+    if (pt.x < -30 || pt.x > w + 30 || pt.y < -30 || pt.y > h + 30) continue;
+    const dir = (p.dir[hour] + 180) * Math.PI / 180;   // travel direction (data = coming-from)
+    const len = 8 + (p.per[hour] || 6) * 1.2;
+    const col = rampColor(hgt / 4);
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = .95;
+    const dx = Math.sin(dir) * len, dy = -Math.cos(dir) * len;
+    ctx.beginPath(); ctx.moveTo(pt.x - dx / 2, pt.y - dy / 2); ctx.lineTo(pt.x + dx / 2, pt.y + dy / 2); ctx.stroke();
+    // arrowhead
+    const ang = Math.atan2(dy, dx);
+    ctx.beginPath();
+    ctx.moveTo(pt.x + dx / 2, pt.y + dy / 2);
+    ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang - .4), pt.y + dy / 2 - 6 * Math.sin(ang - .4));
+    ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang + .4), pt.y + dy / 2 - 6 * Math.sin(ang + .4));
+    ctx.fill();
+    ctx.globalAlpha = .55;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 2.5 + hgt * 1.5, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+async function setMode(m) {
+  if (mode === m) m = null;                        // toggle off
+  mode = m;
+  document.getElementById("btnWind").classList.toggle("on", m === "wind");
+  document.getElementById("btnWaves").classList.toggle("on", m === "waves");
+  document.getElementById("timeCtl").style.display = m ? "flex" : "none";
+  document.getElementById("ovLegend").style.display = m ? "block" : "none";
+  ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+  parts = [];
+  stopPlay();
+  if (!m) return;
+  document.getElementById("ovLegendTitle").textContent = m === "wind" ? "wind speed" : "wave height";
+  document.getElementById("legLo").textContent = m === "wind" ? "0 kn" : "0 m";
+  document.getElementById("legHi").textContent = m === "wind" ? "35+ kn" : "4+ m";
+  try {
+    if (m === "wind" && !windGrid) windGrid = await fetchWindGrid();
+    if (m === "waves" && !waveGrid) waveGrid = await fetchWaveGrid();
+  } catch (e) {
+    document.getElementById("timeLbl").textContent = "fetch failed";
+    return;
+  }
+  if (mode !== m) return;                          // user toggled meanwhile
+  updateTimeLbl();
+  if (m === "wind") requestAnimationFrame(stepWind); else drawWaves();
+}
+
+function updateTimeLbl() {
+  const g = windGrid || waveGrid;
+  if (!g) return;
+  const t = g.time[hour];
+  document.getElementById("timeLbl").textContent =
+    new Date(t + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }) + " (Paris)";
+}
+document.getElementById("timeSlider").addEventListener("input", e => {
+  hour = +e.target.value; updateTimeLbl();
+  if (mode === "waves") drawWaves();
+});
+function togglePlay() {
+  playing ? stopPlay() : startPlay();
+}
+function startPlay() {
+  playing = true; document.getElementById("playBtn").textContent = "⏸";
+  playTimer = setInterval(() => {
+    hour = (hour + 1) % 96;
+    document.getElementById("timeSlider").value = hour;
+    updateTimeLbl();
+    if (mode === "waves") drawWaves();
+  }, 500);
+}
+function stopPlay() {
+  playing = false; document.getElementById("playBtn").textContent = "▶";
+  clearInterval(playTimer);
+}
+resizeCanvas();
+
+/* ================= per-spot forecast strip (unchanged) ================= */
 function dirFactor(dir, w) {
-  // 1 inside [dirMin, dirMax] sector, soft ±20° shoulders, wrap-aware
   const inSector = (a, from, to) => (to - from + 360) % 360 >= (a - from + 360) % 360;
   if (inSector(dir, w.dirMin, w.dirMax)) return 1;
   const distTo = (a, b) => Math.min((a - b + 360) % 360, (b - a + 360) % 360);
@@ -151,7 +388,6 @@ function speedFactor(kn, w) {
   if (kn <= w.idealMax) return 1;
   return Math.max(0, 1 - (kn - w.idealMax) / 15);
 }
-
 async function loadForecast(s) {
   const mid = s.track[Math.floor(s.track.length / 2)];
   const key = "fc-" + s.id;
@@ -173,10 +409,7 @@ async function loadForecast(s) {
     }
   }
   const H = data.hourly, days = {};
-  H.time.forEach((t, i) => {
-    const day = t.slice(0, 10);
-    (days[day] = days[day] || []).push(i);
-  });
+  H.time.forEach((t, i) => { const d = t.slice(0, 10); (days[d] = days[d] || []).push(i); });
   const readout = document.getElementById("readout");
   const fmtDay = d => new Date(d + "T12:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
   document.getElementById("fcDays").innerHTML = Object.entries(days).map(([day, idxs]) => `
@@ -184,9 +417,9 @@ async function loadForecast(s) {
       <div class="lbl">${fmtDay(day)}</div>
       <div class="cells">${idxs.map(i => {
         const kn = H.wind_speed_10m[i], dir = H.wind_direction_10m[i], gust = H.wind_gusts_10m[i];
-        const hour = +H.time[i].slice(11, 13);
+        const hr = +H.time[i].slice(11, 13);
         const score = speedFactor(kn, s.wind) * dirFactor(dir, s.wind);
-        const night = hour < 7 || hour > 21;
+        const night = hr < 7 || hr > 21;
         return `<div class="cell${night ? " night" : ""}" style="background:${rampColor(score)}"
           data-info="${H.time[i].replace("T", " ")} — ${Math.round(kn)} kn (gusts ${Math.round(gust)}), ${Math.round(dir)}° · score ${score.toFixed(2)}"></div>`;
       }).join("")}</div>
@@ -195,9 +428,6 @@ async function loadForecast(s) {
     c.addEventListener("pointerenter", () => readout.textContent = c.dataset.info);
   });
 }
-
-/* open first spot by default */
-if (SPOTS.length) select(SPOTS[0].id);
 </script>
 </body>
 </html>
