@@ -8,84 +8,146 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root {
-    --bg:#0a0e14; --panel:#0e131c; --line:#1e2633; --fg:#e8e6df; --dim:#8a92a6; --faint:#525b70;
+    --bg:#0a0e14; --panel:rgba(13,18,27,.94); --line:#232b3a; --fg:#e8e6df;
+    --dim:#8a92a6; --faint:#525b70;
     --sea:#38a3a5; --sea-bright:#8ceedd;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; }
   body { background:var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,"Inter",sans-serif; }
-  #app { display:grid; grid-template-columns:380px 1fr; height:100vh; }
+  #app { display:grid; grid-template-columns:390px 1fr; height:100vh; }
   @media (max-width:800px) { #app { grid-template-columns:1fr; grid-template-rows:1fr 50vh; } }
 
-  aside { background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:1.4rem 1.5rem; }
-  aside h1 { font-weight:300; font-size:1.5rem; letter-spacing:.05em; margin-bottom:.2rem; }
-  aside h1 b { font-weight:650; color:var(--sea-bright); }
-  aside .sub { color:var(--faint); font-size:.85rem; margin-bottom:1.4rem; line-height:1.5; }
-
-  .spot-btn {
-    width:100%; text-align:left; background:none; border:1px solid var(--line); border-radius:10px;
-    color:var(--fg); padding:.8rem 1rem; margin-bottom:.6rem; cursor:pointer; font:inherit;
-    transition:border-color .2s;
+  aside {
+    background:var(--panel); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-right:1px solid var(--line); overflow-y:auto; padding:1.5rem 1.5rem 2rem;
   }
-  .spot-btn:hover, .spot-btn.active { border-color:var(--sea); }
-  .spot-btn .n { font-weight:600; }
-  .spot-btn .a { color:var(--faint); font-size:.8rem; margin-top:.15rem; }
+
+  /* ---- hero ---- */
+  .hero h1 { font-weight:300; font-size:1.65rem; letter-spacing:.05em; }
+  .hero h1 b { font-weight:700; color:var(--sea-bright); }
+  .hero .tag { color:var(--dim); font-size:.85rem; margin-top:.25rem; line-height:1.55; }
+  .hero .tag a { color:var(--dim); }
+  .wavebar { overflow:hidden; height:12px; margin:.9rem 0 1.2rem; opacity:.75; }
+  .wavebar svg { display:block; width:200%; height:12px; animation:wavedrift 7s linear infinite; }
+  @keyframes wavedrift { from { transform:translateX(0); } to { transform:translateX(-25%); } }
+
+  /* ---- spot cards ---- */
+  .spot-btn {
+    width:100%; text-align:left; background:rgba(255,255,255,.02); border:1px solid var(--line);
+    border-radius:14px; color:var(--fg); padding:.85rem 1rem; margin-bottom:.6rem; cursor:pointer;
+    font:inherit; transition:border-color .2s, background .2s, transform .15s;
+  }
+  .spot-btn:hover { border-color:var(--sea); background:rgba(140,238,221,.05); transform:translateY(-1px); }
+  .spot-btn.active { border-color:var(--sea-bright); background:rgba(140,238,221,.07); }
+  .spot-btn .top { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .spot-btn .n { font-weight:650; font-size:.95rem; }
+  .spot-btn .a { color:var(--faint); font-size:.78rem; margin-top:.3rem; line-height:1.45; }
+
+  .badge {
+    display:inline-block; flex:none; font-size:.62rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; padding:.16rem .55rem; border-radius:99px; white-space:nowrap;
+  }
+  .badge.lv-inter  { color:#a9d68e; background:rgba(93,164,89,.16);  border:1px solid rgba(93,164,89,.45); }
+  .badge.lv-adv    { color:#ecd47c; background:rgba(212,181,62,.14); border:1px solid rgba(212,181,62,.45); }
+  .badge.lv-expert { color:#f0a184; background:rgba(207,92,52,.16);  border:1px solid rgba(207,92,52,.5); }
 
   #backBtn { display:none; background:none; border:none; color:var(--sea-bright); cursor:pointer; font:inherit; font-size:.85rem; padding:0; margin-bottom:1rem; }
   #backBtn:hover { text-decoration:underline; }
 
-  #detail { margin-top:1.4rem; display:none; }
-  #detail h2 { font-size:1.2rem; font-weight:650; }
-  #detail .meta { color:var(--dim); font-size:.85rem; margin:.4rem 0 1rem; line-height:1.6; }
-  #detail .meta b { color:var(--fg); font-weight:600; }
-  #detail p.desc { color:#c9c7bf; font-size:.92rem; line-height:1.65; margin-bottom:1rem; }
-  #detail ul { margin:0 0 1.2rem 1.1rem; }
-  #detail li { color:var(--dim); font-size:.88rem; line-height:1.6; margin-bottom:.4rem; }
+  /* ---- detail ---- */
+  #detail { margin-top:1.5rem; display:none; }
+  #detail h2 { font-size:1.25rem; font-weight:700; letter-spacing:.01em; }
+  #detail .meta { color:var(--dim); font-size:.85rem; margin:.5rem 0 .2rem; line-height:1.7; }
+  #detail .meta b { color:var(--fg); font-weight:650; }
+  .kicker {
+    font-size:.66rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--sea-bright); opacity:.85; margin:1.2rem 0 .45rem;
+  }
+  #detail p.desc { color:#c9c7bf; font-size:.92rem; line-height:1.68; }
+  #detail ul { margin:0 0 .4rem 1.1rem; }
+  #detail li { color:var(--dim); font-size:.88rem; line-height:1.62; margin-bottom:.45rem; }
 
-  .fc h3 { font-size:.8rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:.6rem; }
-  .fc .days { display:flex; gap:3px; }
+  /* ---- forecast strip ---- */
+  .fc { margin-top:.4rem; }
+  .fc .days { display:flex; gap:4px; }
   .fc .day { flex:1; }
-  .fc .day .lbl { text-align:center; color:var(--faint); font-size:.72rem; margin-bottom:.3rem; }
-  .fc .cells { display:flex; gap:1px; }
-  .fc .cell { flex:1; height:34px; border-radius:2px; background:#10141c; cursor:default; }
-  .fc .cell.night { opacity:.38; }
-  .fc #readout { margin-top:.55rem; color:var(--dim); font-size:.8rem; min-height:1.2em; }
+  .fc .day .lbl { text-align:center; color:var(--faint); font-size:.72rem; margin-bottom:.35rem; }
+  .fc .cells { display:flex; gap:2px; }
+  .fc .cell { flex:1; height:36px; border-radius:4px; background:#10141c; cursor:default; }
+  .fc .cell.night { opacity:.35; }
+  .fc #readout { margin-top:.6rem; color:var(--dim); font-size:.8rem; min-height:1.2em; }
   .fc .legend { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; color:var(--faint); font-size:.72rem; }
-  .fc .legend .bar { flex:1; height:8px; border-radius:4px;
-    background:linear-gradient(to right, #14313b, #2b6f70, #55b3a8, #8ceedd); }
-  .fc .src { color:var(--faint); font-size:.7rem; margin-top:.6rem; }
+  .fc .legend .bar { flex:1; height:8px; border-radius:4px; }
+  .fc .src { color:var(--faint); font-size:.7rem; margin-top:.6rem; line-height:1.5; }
   .fc .src a { color:var(--faint); }
 
+  /* ---- add your run ---- */
+  .addrun { margin-top:1.8rem; padding-top:1.3rem; border-top:1px solid var(--line); }
+  .addrun-btn {
+    display:block; text-align:center; text-decoration:none; font-weight:650; font-size:.92rem;
+    color:#0a0e14; background:linear-gradient(135deg, var(--sea-bright), #55c9b4);
+    border-radius:12px; padding:.75rem 1rem;
+    box-shadow:0 4px 18px rgba(140,238,221,.18); transition:filter .2s, transform .15s;
+  }
+  .addrun-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+  .addrun-note { color:var(--faint); font-size:.76rem; line-height:1.5; margin-top:.55rem; text-align:center; }
+
+  /* ---- map ---- */
   #mapwrap { position:relative; height:100%; }
   #map { height:100%; z-index:1; }
+  #heatCanvas { position:absolute; inset:0; z-index:390; pointer-events:none; }
   #overlayCanvas { position:absolute; inset:0; z-index:400; pointer-events:none; }
   .leaflet-container { background:#0a0e14; }
 
-  /* overlay controls */
-  #layerCtl {
-    position:absolute; top:.8rem; right:.8rem; z-index:500; display:flex; gap:.4rem;
+  /* ---- overlay controls (glass) ---- */
+  .glass {
+    background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--line); box-shadow:0 8px 30px rgba(0,0,0,.45);
   }
+  #layerCtl { position:absolute; top:.8rem; right:.8rem; z-index:500; display:flex; gap:.4rem; }
   #layerCtl button {
-    background:rgba(14,19,28,.9); border:1px solid var(--line); color:var(--dim);
-    border-radius:8px; padding:.45rem .8rem; cursor:pointer; font:inherit; font-size:.85rem;
+    background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--line); color:var(--dim); border-radius:10px;
+    padding:.5rem .85rem; cursor:pointer; font:inherit; font-size:.85rem; transition:color .2s, border-color .2s;
   }
   #layerCtl button.on { color:var(--sea-bright); border-color:var(--sea); }
+
+  /* ---- Windy-style time bar ---- */
   #timeCtl {
     position:absolute; left:50%; bottom:1.2rem; transform:translateX(-50%);
-    z-index:500; display:none; align-items:center; gap:.7rem;
-    background:rgba(14,19,28,.92); border:1px solid var(--line); border-radius:10px;
-    padding:.55rem .9rem; width:min(560px, 90%);
+    z-index:500; display:none; align-items:center; gap:.8rem;
+    border-radius:18px; padding:.65rem 1rem .5rem; width:min(620px, 92%);
   }
-  #timeCtl button { background:none; border:none; color:var(--sea-bright); font-size:1rem; cursor:pointer; }
-  #timeCtl input[type=range] { flex:1; accent-color:var(--sea); }
-  #timeCtl #timeLbl { color:var(--dim); font-size:.8rem; white-space:nowrap; min-width:7.5rem; text-align:right; }
+  #playBtn {
+    flex:none; width:36px; height:36px; border-radius:50%; border:none; cursor:pointer;
+    background:var(--sea-bright); color:#0a0e14; font-size:.95rem; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 12px rgba(140,238,221,.35); transition:filter .2s;
+  }
+  #playBtn:hover { filter:brightness(1.1); }
+  #timeCtl .track { flex:1; min-width:0; }
+  #timeCtl input[type=range] {
+    -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px;
+    background:rgba(255,255,255,.12); outline:none; cursor:pointer;
+  }
+  #timeCtl input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--sea-bright); box-shadow:0 0 10px rgba(140,238,221,.6); cursor:pointer;
+  }
+  #timeCtl input[type=range]::-moz-range-thumb {
+    width:14px; height:14px; border:none; border-radius:50%;
+    background:var(--sea-bright); box-shadow:0 0 10px rgba(140,238,221,.6); cursor:pointer;
+  }
+  #dayTicks { display:flex; margin-top:.25rem; }
+  #dayTicks span { flex:1; text-align:center; color:var(--faint); font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; }
+  #timeCtl #timeLbl { flex:none; color:var(--dim); font-size:.8rem; white-space:nowrap; min-width:7.5rem; text-align:right; }
+
   #ovLegend {
     position:absolute; left:.8rem; bottom:1.2rem; z-index:500; display:none;
-    background:rgba(14,19,28,.92); border:1px solid var(--line); border-radius:8px;
-    padding:.5rem .7rem; color:var(--faint); font-size:.7rem; width:170px;
+    border-radius:10px; padding:.55rem .75rem; color:var(--faint); font-size:.7rem; width:180px;
   }
-  #ovLegend .bar { height:8px; border-radius:4px; margin:.3rem 0;
-    background:linear-gradient(to right, #14313b, #2b6f70, #55b3a8, #8ceedd); }
+  #ovLegend .bar { height:8px; border-radius:4px; margin:.35rem 0; }
   #ovLegend .ends { display:flex; justify-content:space-between; }
   .spot-icon { font-size:22px; text-shadow:0 0 6px #000; }
   footer.credit { position:absolute; bottom:.35rem; right:.5rem; z-index:500; color:#525b70; font-size:.7rem; }
@@ -95,41 +157,59 @@
 <body>
 <div id="app">
   <aside>
-    <h1>down<b>the</b>wind</h1>
-    <div class="sub">Wing &amp; SUP-foil downwind runs in France. Pick a run, check the wind, send it.
-      By <a href="https://corentinbel.com" style="color:var(--dim)">Corentin Bel</a>.</div>
+    <div class="hero">
+      <h1>down<b>the</b>wind</h1>
+      <div class="tag">Wing &amp; SUP-foil downwind runs in France. Pick a run, check the wind, send it.
+        By <a href="https://corentinbel.com">Corentin Bel</a>.</div>
+      <div class="wavebar">
+        <svg viewBox="0 0 240 12" preserveAspectRatio="none">
+          <path d="M0 6 Q 7.5 1, 15 6 T 30 6 T 45 6 T 60 6 T 75 6 T 90 6 T 105 6 T 120 6 T 135 6 T 150 6 T 165 6 T 180 6 T 195 6 T 210 6 T 225 6 T 240 6"
+                fill="none" stroke="#8ceedd" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
     <button id="backBtn" onclick="backToFrance()">← all runs</button>
     <div id="spotList"></div>
     <div id="detail">
       <h2 id="dName"></h2>
       <div class="meta" id="dMeta"></div>
+      <div class="kicker">The run</div>
       <p class="desc" id="dDesc"></p>
+      <div class="kicker">Local knowledge</div>
       <ul id="dTips"></ul>
       <div class="fc">
-        <h3>Downwind window — next 4 days</h3>
+        <div class="kicker">Downwind window — next 4 days</div>
         <div class="days" id="fcDays"></div>
         <div id="readout">hover a cell for details</div>
-        <div class="legend"><span>no-go</span><div class="bar"></div><span>send it</span></div>
+        <div class="legend"><span>no-go</span><div class="bar" id="fcLegendBar"></div><span>send it</span></div>
         <div class="src">AROME model via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · night hours dimmed · score = wind speed × direction fit</div>
       </div>
+    </div>
+    <div class="addrun">
+      <a class="addrun-btn" href="https://github.com/BelCorentin/downthewind.com/issues/new?template=new-run.yml" target="_blank" rel="noopener">➕ Add your run</a>
+      <div class="addrun-note">Runs are reviewed and added by hand — leave your track and comments.</div>
     </div>
   </aside>
   <div id="mapwrap">
     <div id="map"></div>
+    <canvas id="heatCanvas"></canvas>
     <canvas id="overlayCanvas"></canvas>
     <div id="layerCtl">
       <button id="btnWind" onclick="setMode('wind')">💨 wind</button>
       <button id="btnWaves" onclick="setMode('waves')">🌊 waves</button>
     </div>
-    <div id="timeCtl">
+    <div id="timeCtl" class="glass">
       <button id="playBtn" onclick="togglePlay()">▶</button>
-      <input type="range" id="timeSlider" min="0" max="95" value="0">
+      <div class="track">
+        <input type="range" id="timeSlider" min="0" max="95" value="0">
+        <div id="dayTicks"></div>
+      </div>
       <span id="timeLbl"></span>
     </div>
-    <div id="ovLegend">
+    <div id="ovLegend" class="glass">
       <div id="ovLegendTitle">wind speed</div>
-      <div class="bar"></div>
-      <div class="ends"><span id="legLo">0 kn</span><span id="legHi">35+ kn</span></div>
+      <div class="bar" id="ovLegendBar"></div>
+      <div class="ends"><span id="legLo">0 kn</span><span id="legHi">40+ kn</span></div>
     </div>
     <footer class="credit">tiles © <a href="https://carto.com/attributions">CARTO</a> · © <a href="https://www.openstreetmap.org/copyright">OSM</a> · forecast © <a href="https://open-meteo.com">Open-Meteo</a></footer>
   </div>
@@ -138,10 +218,43 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="spots.js"></script>
 <script>
+/* ================= Windy-like palettes ================= */
+const WIND_PAL = [                              // kn → rgb
+  [0,[75,95,168]],[6,[61,110,171]],[10,[77,141,133]],[14,[93,164,89]],
+  [18,[147,180,71]],[22,[212,181,62]],[27,[214,139,60]],[33,[207,92,52]],
+  [40,[181,50,89]],[50,[134,50,181]]
+];
+const WAVE_PAL = [                              // m → rgb
+  [0,[40,60,100]],[0.5,[50,90,140]],[1,[60,130,160]],[1.5,[80,170,150]],
+  [2.5,[150,190,90]],[3.5,[215,170,70]],[5,[210,100,60]],[7,[170,50,90]]
+];
+function palColor(pal, v) {                     // → [r,g,b]
+  if (v <= pal[0][0]) return pal[0][1];
+  for (let i = 1; i < pal.length; i++) {
+    if (v <= pal[i][0]) {
+      const [v0, c0] = pal[i - 1], [v1, c1] = pal[i], f = (v - v0) / (v1 - v0);
+      return c0.map((c, k) => Math.round(c + (c1[k] - c) * f));
+    }
+  }
+  return pal[pal.length - 1][1];
+}
+function palCss(pal, v) { const c = palColor(pal, v); return `rgb(${c[0]},${c[1]},${c[2]})`; }
+function palGradientCss(pal, max) {
+  const stops = pal.filter(([v]) => v < max).map(([v, c]) => `rgb(${c[0]},${c[1]},${c[2]}) ${(v / max * 100).toFixed(1)}%`);
+  stops.push(`${palCss(pal, max)} 100%`);
+  return `linear-gradient(to right, ${stops.join(", ")})`;
+}
+
 /* ================= map & spots ================= */
 const FRANCE = { center: [46.4, 2.6], zoom: 6 };
 const map = L.map("map", { zoomControl: true }).setView(FRANCE.center, FRANCE.zoom);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(map);
+
+function levelTag(s) {                          // short tag derived from spots.js level text
+  const t = s.level.split("—")[0].trim();
+  const cls = /expert/i.test(t) ? "lv-expert" : /advanced/i.test(t) ? "lv-adv" : "lv-inter";
+  return { t, cls };
+}
 
 const layers = {}, markers = {};
 for (const s of SPOTS) {
@@ -158,20 +271,24 @@ for (const s of SPOTS) {
 }
 
 const listEl = document.getElementById("spotList");
-listEl.innerHTML = SPOTS.map(s => `
+listEl.innerHTML = SPOTS.map(s => {
+  const lv = levelTag(s);
+  return `
   <button class="spot-btn" id="btn-${s.id}" onclick="select('${s.id}')">
-    <div class="n">${s.name}</div>
+    <div class="top"><div class="n">${s.name}</div><span class="badge ${lv.cls}">${lv.t}</span></div>
     <div class="a">${s.area} · ${s.distanceKm} km · ${s.windName}</div>
-  </button>`).join("");
+  </button>`;
+}).join("");
 
 function select(id) {
   const s = SPOTS.find(x => x.id === id);
+  const lv = levelTag(s);
   document.querySelectorAll(".spot-btn").forEach(b => b.classList.toggle("active", b.id === "btn-" + id));
   document.getElementById("detail").style.display = "block";
   document.getElementById("backBtn").style.display = "block";
   document.getElementById("dName").textContent = s.name;
   document.getElementById("dMeta").innerHTML =
-    `<b>${s.distanceKm} km</b> · ${s.windName}, ${s.wind.idealMin}–${s.wind.idealMax} kn ideal<br>${s.level}`;
+    `<span class="badge ${lv.cls}">${lv.t}</span><br><b>${s.distanceKm} km</b> · ${s.windName}, ${s.wind.idealMin}–${s.wind.idealMax} kn ideal<br>${s.level}`;
   document.getElementById("dDesc").textContent = s.description;
   document.getElementById("dTips").innerHTML = s.tips.map(t => `<li>${t}</li>`).join("");
   Object.values(layers).forEach(l => map.removeLayer(l));
@@ -187,17 +304,10 @@ function backToFrance() {
   map.flyTo(FRANCE.center, FRANCE.zoom);
 }
 
-/* ================= shared color ramp (sequential, single teal hue) ================= */
-const RAMP = [[0x14,0x31,0x3b],[0x2b,0x6f,0x70],[0x55,0xb3,0xa8],[0x8c,0xee,0xdd]];
-function rampColor(t) {
-  t = Math.max(0, Math.min(1, t));
-  const x = t * (RAMP.length - 1), i = Math.min(RAMP.length - 2, Math.floor(x)), f = x - i;
-  const c = RAMP[i].map((v, k) => Math.round(v + (RAMP[i + 1][k] - v) * f));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-/* ================= weather overlay: wind particles / wave arrows + time slider ================= */
+/* ================= weather overlay: color field + wind particles / wave arrows ================= */
 const cv = document.getElementById("overlayCanvas"), ctx = cv.getContext("2d");
+const heatCv = document.getElementById("heatCanvas"), heatCtx = heatCv.getContext("2d");
+const off = document.createElement("canvas"), offCtx = off.getContext("2d");
 let mode = null, hour = 0, playing = false, playTimer = null;
 let windGrid = null, waveGrid = null;   // { lats[], lons[], pts: [ {sp[],dir[],per[]} ] , time[] }
 const GRID_N = 10, BBOX = { lat0: 41.0, lat1: 51.5, lon0: -5.5, lon1: 9.5 };
@@ -230,35 +340,89 @@ async function fetchWaveGrid() {
     pts: arr.map(p => ({ sp: p.hourly.wave_height, dir: p.hourly.wave_direction, per: p.hourly.wave_period })) };
 }
 
-// bilinear interpolation of (speed, dir) at lat/lon for current hour — wind only
-function windAt(lat, lon) {
-  const g = windGrid;
-  if (!g || lat < BBOX.lat0 || lat > BBOX.lat1 || lon < BBOX.lon0 || lon > BBOX.lon1) return null;
+// grid cell + bilinear weights at lat/lon (shared by windAt / waveAt)
+function cellWeights(lat, lon) {
+  if (lat < BBOX.lat0 || lat > BBOX.lat1 || lon < BBOX.lon0 || lon > BBOX.lon1) return null;
   const fi = (lat - BBOX.lat0) / (BBOX.lat1 - BBOX.lat0) * (GRID_N - 1);
   const fj = (lon - BBOX.lon0) / (BBOX.lon1 - BBOX.lon0) * (GRID_N - 1);
   const i = Math.min(GRID_N - 2, Math.floor(fi)), j = Math.min(GRID_N - 2, Math.floor(fj));
   const di = fi - i, dj = fj - j;
+  return [[i, j, (1 - di) * (1 - dj)], [i + 1, j, di * (1 - dj)], [i, j + 1, (1 - di) * dj], [i + 1, j + 1, di * dj]];
+}
+
+// bilinear interpolation of (u, v, speed) at lat/lon for current hour — wind
+function windAt(lat, lon) {
+  const g = windGrid;
+  if (!g) return null;
+  const cw = cellWeights(lat, lon);
+  if (!cw) return null;
   // interpolate u/v components to avoid 359°→0° seams
   let u = 0, v = 0;
-  for (const [ii, jj, w] of [[i,j,(1-di)*(1-dj)],[i+1,j,di*(1-dj)],[i,j+1,(1-di)*dj],[i+1,j+1,di*dj]]) {
+  for (const [ii, jj, w] of cw) {
     const p = g.pts[ii * GRID_N + jj], s = p.sp[hour], d = p.dir[hour] * Math.PI / 180;
     if (s == null) return null;
     u += -Math.sin(d) * s * w; v += -Math.cos(d) * s * w;
   }
   return { u, v, s: Math.hypot(u, v) };
 }
+// bilinear wave height, tolerant of land (null) corners
+function waveAt(lat, lon) {
+  const g = waveGrid;
+  if (!g) return null;
+  const cw = cellWeights(lat, lon);
+  if (!cw) return null;
+  let sum = 0, wt = 0;
+  for (const [ii, jj, w] of cw) {
+    const hgt = g.pts[ii * GRID_N + jj].sp[hour];
+    if (hgt == null) continue;
+    sum += hgt * w; wt += w;
+  }
+  return wt < 0.25 ? null : sum / wt;
+}
 
-/* particles */
+/* ---- Windy-style color field on its own canvas, under particles/arrows ---- */
+function drawHeat() {
+  const w = heatCv.clientWidth, h = heatCv.clientHeight;
+  if (heatCv.width !== w || heatCv.height !== h) { heatCv.width = w; heatCv.height = h; }
+  heatCtx.clearRect(0, 0, w, h);
+  if (!mode || !w || !h) return;
+  const g = mode === "wind" ? windGrid : waveGrid;
+  if (!g) return;
+  const pal = mode === "wind" ? WIND_PAL : WAVE_PAL;
+  const W = 160, H = Math.max(2, Math.round(W * h / w));
+  off.width = W; off.height = H;
+  const img = offCtx.createImageData(W, H);
+  let k = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++, k += 4) {
+      const ll = map.containerPointToLatLng([(x + .5) * w / W, (y + .5) * h / H]);
+      let val;
+      if (mode === "wind") { const f = windAt(ll.lat, ll.lng); val = f ? f.s : null; }
+      else val = waveAt(ll.lat, ll.lng);
+      if (val == null) continue;                 // out of grid / land → transparent
+      const c = palColor(pal, val);
+      img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
+    }
+  }
+  offCtx.putImageData(img, 0, 0);
+  heatCtx.globalAlpha = 0.45;
+  heatCtx.imageSmoothingEnabled = true;
+  heatCtx.drawImage(off, 0, 0, w, h);
+  heatCtx.globalAlpha = 1;
+}
+
+/* ---- particles (white translucent, field colors live in the heat layer) ---- */
 let parts = [];
 function resizeCanvas() {
   cv.width = cv.clientWidth * devicePixelRatio;
   cv.height = cv.clientHeight * devicePixelRatio;
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   parts = [];
+  drawHeat();
   if (mode === "waves") drawWaves();
 }
 addEventListener("resize", resizeCanvas);
-map.on("moveend zoomend", () => { parts = []; if (mode === "waves") drawWaves(); });
+map.on("moveend zoomend", () => { parts = []; drawHeat(); if (mode === "waves") drawWaves(); });
 map.on("move zoom", () => { if (mode === "waves") drawWaves(); });
 
 function spawn() {
@@ -279,8 +443,8 @@ function stepWind() {
     if (!f || p.life-- < 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) { Object.assign(p, spawn()); continue; }
     const k = 0.05 + map.getZoom() * 0.012;
     const nx = p.x + f.u * k, ny = p.y - f.v * k;
-    ctx.strokeStyle = rampColor(f.s / 35);
-    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = "#ffffff";
+    ctx.globalAlpha = 0.25 + Math.min(0.5, f.s / 70);
     ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
     p.x = nx; p.y = ny;
@@ -302,8 +466,8 @@ function drawWaves() {
     if (pt.x < -30 || pt.x > w + 30 || pt.y < -30 || pt.y > h + 30) continue;
     const dir = (p.dir[hour] + 180) * Math.PI / 180;   // travel direction (data = coming-from)
     const len = 8 + (p.per[hour] || 6) * 1.2;
-    const col = rampColor(hgt / 4);
-    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = .95;
+    const col = "rgba(240,246,255,.9)";            // arrows on top; color lives in the heat field
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = .9;
     const dx = Math.sin(dir) * len, dy = -Math.cos(dir) * len;
     ctx.beginPath(); ctx.moveTo(pt.x - dx / 2, pt.y - dy / 2); ctx.lineTo(pt.x + dx / 2, pt.y + dy / 2); ctx.stroke();
     // arrowhead
@@ -313,7 +477,7 @@ function drawWaves() {
     ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang - .4), pt.y + dy / 2 - 6 * Math.sin(ang - .4));
     ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang + .4), pt.y + dy / 2 - 6 * Math.sin(ang + .4));
     ctx.fill();
-    ctx.globalAlpha = .55;
+    ctx.globalAlpha = .4;
     ctx.beginPath(); ctx.arc(pt.x, pt.y, 2.5 + hgt * 1.5, 0, 7); ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -329,10 +493,13 @@ async function setMode(m) {
   ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
   parts = [];
   stopPlay();
+  drawHeat();                                      // clears the field when toggled off
   if (!m) return;
   document.getElementById("ovLegendTitle").textContent = m === "wind" ? "wind speed" : "wave height";
   document.getElementById("legLo").textContent = m === "wind" ? "0 kn" : "0 m";
-  document.getElementById("legHi").textContent = m === "wind" ? "35+ kn" : "4+ m";
+  document.getElementById("legHi").textContent = m === "wind" ? "40+ kn" : "5+ m";
+  document.getElementById("ovLegendBar").style.background =
+    m === "wind" ? palGradientCss(WIND_PAL, 40) : palGradientCss(WAVE_PAL, 5);
   try {
     if (m === "wind" && !windGrid) windGrid = await fetchWindGrid();
     if (m === "waves" && !waveGrid) waveGrid = await fetchWaveGrid();
@@ -342,6 +509,8 @@ async function setMode(m) {
   }
   if (mode !== m) return;                          // user toggled meanwhile
   updateTimeLbl();
+  buildDayTicks();
+  drawHeat();
   if (m === "wind") requestAnimationFrame(stepWind); else drawWaves();
 }
 
@@ -352,8 +521,17 @@ function updateTimeLbl() {
   document.getElementById("timeLbl").textContent =
     new Date(t + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }) + " (Paris)";
 }
+function buildDayTicks() {
+  const g = windGrid || waveGrid;
+  if (!g) return;
+  const days = [];
+  for (const t of g.time) { const d = t.slice(0, 10); if (!days.includes(d)) days.push(d); }
+  document.getElementById("dayTicks").innerHTML = days.map(d =>
+    `<span>${new Date(d + "T12:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })}</span>`).join("");
+}
 document.getElementById("timeSlider").addEventListener("input", e => {
   hour = +e.target.value; updateTimeLbl();
+  drawHeat();
   if (mode === "waves") drawWaves();
 });
 function togglePlay() {
@@ -365,6 +543,7 @@ function startPlay() {
     hour = (hour + 1) % 96;
     document.getElementById("timeSlider").value = hour;
     updateTimeLbl();
+    drawHeat();
     if (mode === "waves") drawWaves();
   }, 500);
 }
@@ -374,7 +553,9 @@ function stopPlay() {
 }
 resizeCanvas();
 
-/* ================= per-spot forecast strip (unchanged) ================= */
+/* ================= per-spot forecast strip ================= */
+document.getElementById("fcLegendBar").style.background = palGradientCss(WIND_PAL, 30);
+
 function dirFactor(dir, w) {
   const inSector = (a, from, to) => (to - from + 360) % 360 >= (a - from + 360) % 360;
   if (inSector(dir, w.dirMin, w.dirMax)) return 1;
@@ -420,7 +601,7 @@ async function loadForecast(s) {
         const hr = +H.time[i].slice(11, 13);
         const score = speedFactor(kn, s.wind) * dirFactor(dir, s.wind);
         const night = hr < 7 || hr > 21;
-        return `<div class="cell${night ? " night" : ""}" style="background:${rampColor(score)}"
+        return `<div class="cell${night ? " night" : ""}" style="background:${palCss(WIND_PAL, score * 30)}"
           data-info="${H.time[i].replace("T", " ")} — ${Math.round(kn)} kn (gusts ${Math.round(gust)}), ${Math.round(dir)}° · score ${score.toFixed(2)}"></div>`;
       }).join("")}</div>
     </div>`).join("");

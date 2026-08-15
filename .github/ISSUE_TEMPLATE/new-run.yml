@@ -1,0 +1,79 @@
+name: New downwind run
+description: Submit a wing / SUP-foil downwind run to be added to the map
+title: "[run] "
+labels: ["new-run"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a run! Fill in what you can — runs are reviewed and added to the map by hand.
+        Keep waypoints **offshore** (they draw the line people will follow).
+  - type: input
+    id: run-name
+    attributes:
+      label: Run name
+      description: Start → finish
+      placeholder: "Fréjus → Cannes"
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Département / coastline
+      placeholder: "Var / Alpes-Maritimes — Esterel coast"
+    validations:
+      required: true
+  - type: input
+    id: wind
+    attributes:
+      label: Wind
+      description: "Direction sector (° FROM, clockwise) and ideal strength in knots"
+      placeholder: "Mistral W–NW (250–330°), ideal 18–35 kn"
+    validations:
+      required: true
+  - type: input
+    id: distance
+    attributes:
+      label: Distance (km)
+      placeholder: "27"
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Level
+      options:
+        - Intermediate+
+        - Advanced
+        - Expert
+    validations:
+      required: true
+  - type: textarea
+    id: waypoints
+    attributes:
+      label: Start / end + waypoints
+      description: 'One "lat, lon" per line, start → finish. Keep them offshore.'
+      placeholder: |
+        43.410, 6.745
+        43.402, 6.780
+        43.542, 7.012
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What makes this run — launch, line, sea state, finish.
+    validations:
+      required: true
+  - type: textarea
+    id: tips
+    attributes:
+      label: Tips
+      description: One tip per line — hazards, commitment points, exits, transport back, logistics.
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos (optional)
+      description: Links to photos of the run (drag & drop works too).
