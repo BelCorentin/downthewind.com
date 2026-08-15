@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>downthewind</title>
+<meta name="description" content="Wing & SUP-foil downwind runs in France — interactive map, trajectories, tips, and AROME wind forecasts.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg:#0a0e14; --panel:#0e131c; --line:#1e2633; --fg:#e8e6df; --dim:#8a92a6; --faint:#525b70;
+    --sea:#38a3a5; --sea-bright:#8ceedd;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body { background:var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,"Inter",sans-serif; }
+  #app { display:grid; grid-template-columns:380px 1fr; height:100vh; }
+  @media (max-width:800px) { #app { grid-template-columns:1fr; grid-template-rows:1fr 50vh; } }
+
+  aside { background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:1.4rem 1.5rem; }
+  aside h1 { font-weight:300; font-size:1.5rem; letter-spacing:.05em; margin-bottom:.2rem; }
+  aside h1 b { font-weight:650; color:var(--sea-bright); }
+  aside .sub { color:var(--faint); font-size:.85rem; margin-bottom:1.4rem; line-height:1.5; }
+
+  .spot-btn {
+    width:100%; text-align:left; background:none; border:1px solid var(--line); border-radius:10px;
+    color:var(--fg); padding: .8rem 1rem; margin-bottom:.6rem; cursor:pointer; font:inherit;
+    transition:border-color .2s;
+  }
+  .spot-btn:hover, .spot-btn.active { border-color:var(--sea); }
+  .spot-btn .n { font-weight:600; }
+  .spot-btn .a { color:var(--faint); font-size:.8rem; margin-top:.15rem; }
+
+  #detail { margin-top:1.4rem; display:none; }
+  #detail h2 { font-size:1.2rem; font-weight:650; }
+  #detail .meta { color:var(--dim); font-size:.85rem; margin:.4rem 0 1rem; line-height:1.6; }
+  #detail .meta b { color:var(--fg); font-weight:600; }
+  #detail p.desc { color:#c9c7bf; font-size:.92rem; line-height:1.65; margin-bottom:1rem; }
+  #detail ul { margin:0 0 1.2rem 1.1rem; }
+  #detail li { color:var(--dim); font-size:.88rem; line-height:1.6; margin-bottom:.4rem; }
+
+  .fc h3 { font-size:.8rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:.6rem; }
+  .fc .days { display:flex; gap:3px; }
+  .fc .day { flex:1; }
+  .fc .day .lbl { text-align:center; color:var(--faint); font-size:.72rem; margin-bottom:.3rem; }
+  .fc .cells { display:flex; gap:1px; }
+  .fc .cell { flex:1; height:34px; border-radius:2px; background:#10141c; cursor:default; }
+  .fc .cell.night { opacity:.38; }
+  .fc #readout { margin-top:.55rem; color:var(--dim); font-size:.8rem; min-height:1.2em; }
+  .fc .legend { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; color:var(--faint); font-size:.72rem; }
+  .fc .legend .bar { flex:1; height:8px; border-radius:4px;
+    background:linear-gradient(to right, #14313b, #2b6f70, #55b3a8, #8ceedd); }
+  .fc .src { color:var(--faint); font-size:.7rem; margin-top:.6rem; }
+  .fc .src a { color:var(--faint); }
+
+  #map { height:100%; z-index:1; }
+  .leaflet-container { background:#0a0e14; }
+  footer.credit { position:absolute; bottom:.5rem; right:.6rem; z-index:500; color:#525b70; font-size:.72rem; }
+  footer.credit a { color:#525b70; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>down<b>the</b>wind</h1>
+    <div class="sub">Wing &amp; SUP-foil downwind runs in France. Pick a run, check the wind, send it.
+      By <a href="https://corentinbel.com" style="color:var(--dim)">Corentin Bel</a>.</div>
+    <div id="spotList"></div>
+    <div id="detail">
+      <h2 id="dName"></h2>
+      <div class="meta" id="dMeta"></div>
+      <p class="desc" id="dDesc"></p>
+      <ul id="dTips"></ul>
+      <div class="fc">
+        <h3>Downwind window — next 4 days</h3>
+        <div class="days" id="fcDays"></div>
+        <div id="readout">hover a cell for details</div>
+        <div class="legend"><span>no-go</span><div class="bar"></div><span>send it</span></div>
+        <div class="src">AROME model via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · night hours dimmed · score = wind speed × direction fit</div>
+      </div>
+    </div>
+  </aside>
+  <div id="map"></div>
+</div>
+<footer class="credit">tiles © <a href="https://carto.com/attributions">CARTO</a> · © <a href="https://www.openstreetmap.org/copyright">OSM</a></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="spots.js"></script>
+<script>
+/* ---------------- map ---------------- */
+const map = L.map("map", { zoomControl: true }).setView([46.5, 2.5], 6);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 18, attribution: ""
+}).addTo(map);
+
+const layers = {};
+for (const s of SPOTS) {
+  const line = L.polyline(s.track, { color: "#8ceedd", weight: 3, opacity: .9, dashArray: "1 7", lineCap: "round" });
+  const start = L.circleMarker(s.track[0], { radius: 6, color: "#8ceedd", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 })
+    .bindTooltip("Start — " + s.track.length + " waypoints", { direction: "top" });
+  const end = L.circleMarker(s.track[s.track.length - 1], { radius: 6, color: "#e8a3ff", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 })
+    .bindTooltip("Finish", { direction: "top" });
+  const grp = L.featureGroup([line, start, end]).addTo(map);
+  grp.on("click", () => select(s.id));
+  layers[s.id] = grp;
+}
+
+/* ---------------- sidebar ---------------- */
+const listEl = document.getElementById("spotList");
+listEl.innerHTML = SPOTS.map(s => `
+  <button class="spot-btn" id="btn-${s.id}" onclick="select('${s.id}')">
+    <div class="n">${s.name}</div>
+    <div class="a">${s.area} · ${s.distanceKm} km · ${s.windName}</div>
+  </button>`).join("");
+
+function select(id) {
+  const s = SPOTS.find(x => x.id === id);
+  document.querySelectorAll(".spot-btn").forEach(b => b.classList.toggle("active", b.id === "btn-" + id));
+  document.getElementById("detail").style.display = "block";
+  document.getElementById("dName").textContent = s.name;
+  document.getElementById("dMeta").innerHTML =
+    `<b>${s.distanceKm} km</b> · ${s.windName}, ${s.wind.idealMin}–${s.wind.idealMax} kn ideal<br>${s.level}`;
+  document.getElementById("dDesc").textContent = s.description;
+  document.getElementById("dTips").innerHTML = s.tips.map(t => `<li>${t}</li>`).join("");
+  map.fitBounds(layers[id].getBounds(), { padding: [40, 40] });
+  loadForecast(s);
+}
+
+/* ---------------- forecast: AROME via Open-Meteo, client-side ---------------- */
+
+// sequential ramp, single teal hue, dark-anchored: low = near-surface, high = bright
+const RAMP = [[0x14,0x31,0x3b],[0x2b,0x6f,0x70],[0x55,0xb3,0xa8],[0x8c,0xee,0xdd]];
+function rampColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  const x = t * (RAMP.length - 1), i = Math.min(RAMP.length - 2, Math.floor(x)), f = x - i;
+  const c = RAMP[i].map((v, k) => Math.round(v + (RAMP[i + 1][k] - v) * f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function dirFactor(dir, w) {
+  // 1 inside [dirMin, dirMax] sector, soft ±20° shoulders, wrap-aware
+  const inSector = (a, from, to) => (to - from + 360) % 360 >= (a - from + 360) % 360;
+  if (inSector(dir, w.dirMin, w.dirMax)) return 1;
+  const distTo = (a, b) => Math.min((a - b + 360) % 360, (b - a + 360) % 360);
+  const d = Math.min(distTo(dir, w.dirMin), distTo(dir, w.dirMax));
+  return Math.max(0, 1 - d / 20);
+}
+function speedFactor(kn, w) {
+  if (kn < w.minKn) return 0;
+  if (kn < w.idealMin) return (kn - w.minKn) / (w.idealMin - w.minKn);
+  if (kn <= w.idealMax) return 1;
+  return Math.max(0, 1 - (kn - w.idealMax) / 15);
+}
+
+async function loadForecast(s) {
+  const mid = s.track[Math.floor(s.track.length / 2)];
+  const key = "fc-" + s.id;
+  let data;
+  const cached = sessionStorage.getItem(key);
+  if (cached && Date.now() - JSON.parse(cached).at < 30 * 60e3) {
+    data = JSON.parse(cached).data;
+  } else {
+    const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${mid[0]}&longitude=${mid[1]}` +
+      `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn` +
+      `&forecast_days=4&timezone=Europe%2FParis`;
+    try {
+      data = await (await fetch(url)).json();
+      sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+    } catch (e) {
+      document.getElementById("fcDays").innerHTML =
+        `<div style="color:var(--faint);font-size:.85rem">forecast unavailable (offline?)</div>`;
+      return;
+    }
+  }
+  const H = data.hourly, days = {};
+  H.time.forEach((t, i) => {
+    const day = t.slice(0, 10);
+    (days[day] = days[day] || []).push(i);
+  });
+  const readout = document.getElementById("readout");
+  const fmtDay = d => new Date(d + "T12:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
+  document.getElementById("fcDays").innerHTML = Object.entries(days).map(([day, idxs]) => `
+    <div class="day">
+      <div class="lbl">${fmtDay(day)}</div>
+      <div class="cells">${idxs.map(i => {
+        const kn = H.wind_speed_10m[i], dir = H.wind_direction_10m[i], gust = H.wind_gusts_10m[i];
+        const hour = +H.time[i].slice(11, 13);
+        const score = speedFactor(kn, s.wind) * dirFactor(dir, s.wind);
+        const night = hour < 7 || hour > 21;
+        return `<div class="cell${night ? " night" : ""}" style="background:${rampColor(score)}"
+          data-info="${H.time[i].replace("T", " ")} — ${Math.round(kn)} kn (gusts ${Math.round(gust)}), ${Math.round(dir)}° · score ${score.toFixed(2)}"></div>`;
+      }).join("")}</div>
+    </div>`).join("");
+  document.querySelectorAll(".cell").forEach(c => {
+    c.addEventListener("pointerenter", () => readout.textContent = c.dataset.info);
+  });
+}
+
+/* open first spot by default */
+if (SPOTS.length) select(SPOTS[0].id);
+</script>
+</body>
+</html>
