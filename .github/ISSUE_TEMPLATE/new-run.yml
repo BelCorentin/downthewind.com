@@ -8,6 +8,10 @@ body:
       value: |
         Thanks for sharing a run! Fill in what you can — runs are reviewed and added to the map by hand.
         Keep waypoints **offshore** (they draw the line people will follow).
+
+        Distance is computed from the waypoints, so you do not need to give it.
+        The two sections that matter most are **exits** and **local knowledge**:
+        they are what the site does that a forecast app does not.
   - type: input
     id: run-name
     attributes:
@@ -32,13 +36,6 @@ body:
       placeholder: "Mistral W–NW (250–330°), ideal 18–35 kn"
     validations:
       required: true
-  - type: input
-    id: distance
-    attributes:
-      label: Distance (km)
-      placeholder: "27"
-    validations:
-      required: true
   - type: dropdown
     id: level
     attributes:
@@ -61,6 +58,36 @@ body:
     validations:
       required: true
   - type: textarea
+    id: exits
+    attributes:
+      label: Exits, and how you get home
+      description: >
+        One per line: name, roughly where along the run, how hard it is to land
+        (easy / ok / hard / rocky), what the shore is (sand / pebble / rock /
+        slipway / port), and the nearest station with an honest walk time
+        carrying a board and a wing.
+      placeholder: |
+        Agay — 10 km — easy — sand — Agay station, 1 min, station is on the beach
+        Anthéor — 13 km — rocky — rock — Anthéor-Cap-Roux, 2 min, limited service
+    validations:
+      required: true
+  - type: textarea
+    id: local
+    attributes:
+      label: Local knowledge — what changes with the conditions
+      description: >
+        This is the good stuff. Capes that accelerate or mask the wind, stretches
+        that go confused in a particular wind-over-swell combination, bays that
+        look fine on a map and are dead in practice, shipping lanes. Say WHICH
+        conditions trigger each one — "in W wind over WSW swell", "in NW above
+        20 kn" — not just that it happens.
+      placeholder: |
+        Saint-Raphaël → Agay: W wind over WSW swell = square, confused, unrideable.
+        Cap d'Antibes: in W 15 kn+ go wide, it accelerates. In NW it masks — hole in its lee.
+        Villefranche: in mistral the bay has NO wind and swell still gets in. Do not finish there.
+    validations:
+      required: true
+  - type: textarea
     id: description
     attributes:
       label: Description
@@ -71,7 +98,7 @@ body:
     id: tips
     attributes:
       label: Tips
-      description: One tip per line — hazards, commitment points, exits, transport back, logistics.
+      description: One tip per line — timing, gear, logistics, anything that did not fit above.
   - type: textarea
     id: photos
     attributes:

@@ -2,613 +2,82 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>downthewind</title>
-<meta name="description" content="Wing & SUP-foil downwind runs in France — interactive map, trajectories, tips, and AROME wind forecasts.">
+<meta name="description" content="Downwind wingfoil & SUP-foil runs in France — interactive map, exits, train stations, live local knowledge and AROME forecasts.">
+<meta name="theme-color" content="#070b11">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>
-  :root {
-    --bg:#0a0e14; --panel:rgba(13,18,27,.94); --line:#232b3a; --fg:#e8e6df;
-    --dim:#8a92a6; --faint:#525b70;
-    --sea:#38a3a5; --sea-bright:#8ceedd;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { height:100%; }
-  body { background:var(--bg); color:var(--fg); font-family:ui-sans-serif,system-ui,"Inter",sans-serif; }
-  #app { display:grid; grid-template-columns:390px 1fr; height:100vh; }
-  @media (max-width:800px) { #app { grid-template-columns:1fr; grid-template-rows:1fr 50vh; } }
-
-  aside {
-    background:var(--panel); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-right:1px solid var(--line); overflow-y:auto; padding:1.5rem 1.5rem 2rem;
-  }
-
-  /* ---- hero ---- */
-  .hero h1 { font-weight:300; font-size:1.65rem; letter-spacing:.05em; }
-  .hero h1 b { font-weight:700; color:var(--sea-bright); }
-  .hero .tag { color:var(--dim); font-size:.85rem; margin-top:.25rem; line-height:1.55; }
-  .hero .tag a { color:var(--dim); }
-  .wavebar { overflow:hidden; height:12px; margin:.9rem 0 1.2rem; opacity:.75; }
-  .wavebar svg { display:block; width:200%; height:12px; animation:wavedrift 7s linear infinite; }
-  @keyframes wavedrift { from { transform:translateX(0); } to { transform:translateX(-25%); } }
-
-  /* ---- spot cards ---- */
-  .spot-btn {
-    width:100%; text-align:left; background:rgba(255,255,255,.02); border:1px solid var(--line);
-    border-radius:14px; color:var(--fg); padding:.85rem 1rem; margin-bottom:.6rem; cursor:pointer;
-    font:inherit; transition:border-color .2s, background .2s, transform .15s;
-  }
-  .spot-btn:hover { border-color:var(--sea); background:rgba(140,238,221,.05); transform:translateY(-1px); }
-  .spot-btn.active { border-color:var(--sea-bright); background:rgba(140,238,221,.07); }
-  .spot-btn .top { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
-  .spot-btn .n { font-weight:650; font-size:.95rem; }
-  .spot-btn .a { color:var(--faint); font-size:.78rem; margin-top:.3rem; line-height:1.45; }
-
-  .badge {
-    display:inline-block; flex:none; font-size:.62rem; font-weight:700; letter-spacing:.07em;
-    text-transform:uppercase; padding:.16rem .55rem; border-radius:99px; white-space:nowrap;
-  }
-  .badge.lv-inter  { color:#a9d68e; background:rgba(93,164,89,.16);  border:1px solid rgba(93,164,89,.45); }
-  .badge.lv-adv    { color:#ecd47c; background:rgba(212,181,62,.14); border:1px solid rgba(212,181,62,.45); }
-  .badge.lv-expert { color:#f0a184; background:rgba(207,92,52,.16);  border:1px solid rgba(207,92,52,.5); }
-
-  #backBtn { display:none; background:none; border:none; color:var(--sea-bright); cursor:pointer; font:inherit; font-size:.85rem; padding:0; margin-bottom:1rem; }
-  #backBtn:hover { text-decoration:underline; }
-
-  /* ---- detail ---- */
-  #detail { margin-top:1.5rem; display:none; }
-  #detail h2 { font-size:1.25rem; font-weight:700; letter-spacing:.01em; }
-  #detail .meta { color:var(--dim); font-size:.85rem; margin:.5rem 0 .2rem; line-height:1.7; }
-  #detail .meta b { color:var(--fg); font-weight:650; }
-  .kicker {
-    font-size:.66rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
-    color:var(--sea-bright); opacity:.85; margin:1.2rem 0 .45rem;
-  }
-  #detail p.desc { color:#c9c7bf; font-size:.92rem; line-height:1.68; }
-  #detail ul { margin:0 0 .4rem 1.1rem; }
-  #detail li { color:var(--dim); font-size:.88rem; line-height:1.62; margin-bottom:.45rem; }
-
-  /* ---- forecast strip ---- */
-  .fc { margin-top:.4rem; }
-  .fc .days { display:flex; gap:4px; }
-  .fc .day { flex:1; }
-  .fc .day .lbl { text-align:center; color:var(--faint); font-size:.72rem; margin-bottom:.35rem; }
-  .fc .cells { display:flex; gap:2px; }
-  .fc .cell { flex:1; height:36px; border-radius:4px; background:#10141c; cursor:default; }
-  .fc .cell.night { opacity:.35; }
-  .fc #readout { margin-top:.6rem; color:var(--dim); font-size:.8rem; min-height:1.2em; }
-  .fc .legend { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; color:var(--faint); font-size:.72rem; }
-  .fc .legend .bar { flex:1; height:8px; border-radius:4px; }
-  .fc .src { color:var(--faint); font-size:.7rem; margin-top:.6rem; line-height:1.5; }
-  .fc .src a { color:var(--faint); }
-
-  /* ---- add your run ---- */
-  .addrun { margin-top:1.8rem; padding-top:1.3rem; border-top:1px solid var(--line); }
-  .addrun-btn {
-    display:block; text-align:center; text-decoration:none; font-weight:650; font-size:.92rem;
-    color:#0a0e14; background:linear-gradient(135deg, var(--sea-bright), #55c9b4);
-    border-radius:12px; padding:.75rem 1rem;
-    box-shadow:0 4px 18px rgba(140,238,221,.18); transition:filter .2s, transform .15s;
-  }
-  .addrun-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
-  .addrun-note { color:var(--faint); font-size:.76rem; line-height:1.5; margin-top:.55rem; text-align:center; }
-
-  /* ---- map ---- */
-  #mapwrap { position:relative; height:100%; }
-  #map { height:100%; z-index:1; }
-  #heatCanvas { position:absolute; inset:0; width:100%; height:100%; display:block; z-index:390; pointer-events:none; }
-  #overlayCanvas { position:absolute; inset:0; width:100%; height:100%; display:block; z-index:400; pointer-events:none; }
-  .leaflet-container { background:#0a0e14; }
-
-  /* ---- overlay controls (glass) ---- */
-  .glass {
-    background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border:1px solid var(--line); box-shadow:0 8px 30px rgba(0,0,0,.45);
-  }
-  #layerCtl { position:absolute; top:.8rem; right:.8rem; z-index:500; display:flex; gap:.4rem; }
-  #layerCtl button {
-    background:var(--panel); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border:1px solid var(--line); color:var(--dim); border-radius:10px;
-    padding:.5rem .85rem; cursor:pointer; font:inherit; font-size:.85rem; transition:color .2s, border-color .2s;
-  }
-  #layerCtl button.on { color:var(--sea-bright); border-color:var(--sea); }
-
-  /* ---- Windy-style time bar ---- */
-  #timeCtl {
-    position:absolute; left:50%; bottom:1.2rem; transform:translateX(-50%);
-    z-index:500; display:none; align-items:center; gap:.8rem;
-    border-radius:18px; padding:.65rem 1rem .5rem; width:min(620px, 92%);
-  }
-  #playBtn {
-    flex:none; width:36px; height:36px; border-radius:50%; border:none; cursor:pointer;
-    background:var(--sea-bright); color:#0a0e14; font-size:.95rem; line-height:1;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 2px 12px rgba(140,238,221,.35); transition:filter .2s;
-  }
-  #playBtn:hover { filter:brightness(1.1); }
-  #timeCtl .track { flex:1; min-width:0; }
-  #timeCtl input[type=range] {
-    -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px;
-    background:rgba(255,255,255,.12); outline:none; cursor:pointer;
-  }
-  #timeCtl input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%;
-    background:var(--sea-bright); box-shadow:0 0 10px rgba(140,238,221,.6); cursor:pointer;
-  }
-  #timeCtl input[type=range]::-moz-range-thumb {
-    width:14px; height:14px; border:none; border-radius:50%;
-    background:var(--sea-bright); box-shadow:0 0 10px rgba(140,238,221,.6); cursor:pointer;
-  }
-  #dayTicks { display:flex; margin-top:.25rem; }
-  #dayTicks span { flex:1; text-align:center; color:var(--faint); font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; }
-  #timeCtl #timeLbl { flex:none; color:var(--dim); font-size:.8rem; white-space:nowrap; min-width:7.5rem; text-align:right; }
-
-  #ovLegend {
-    position:absolute; left:.8rem; bottom:1.2rem; z-index:500; display:none;
-    border-radius:10px; padding:.55rem .75rem; color:var(--faint); font-size:.7rem; width:180px;
-  }
-  #ovLegend .bar { height:8px; border-radius:4px; margin:.35rem 0; }
-  #ovLegend .ends { display:flex; justify-content:space-between; }
-  .spot-icon { font-size:22px; text-shadow:0 0 6px #000; }
-  footer.credit { position:absolute; bottom:.35rem; right:.5rem; z-index:500; color:#525b70; font-size:.7rem; }
-  footer.credit a { color:#525b70; }
-</style>
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <div id="app">
-  <aside>
-    <div class="hero">
-      <h1>down<b>the</b>wind</h1>
-      <div class="tag">Wing &amp; SUP-foil downwind runs in France. Pick a run, check the wind, send it.
-        By <a href="https://corentinbel.com">Corentin Bel</a>.</div>
-      <div class="wavebar">
-        <svg viewBox="0 0 240 12" preserveAspectRatio="none">
-          <path d="M0 6 Q 7.5 1, 15 6 T 30 6 T 45 6 T 60 6 T 75 6 T 90 6 T 105 6 T 120 6 T 135 6 T 150 6 T 165 6 T 180 6 T 195 6 T 210 6 T 225 6 T 240 6"
-                fill="none" stroke="#8ceedd" stroke-width="1.5"/>
-        </svg>
+
+  <aside id="aside">
+    <button class="sheet-handle" id="sheetHandle" aria-label="expand"></button>
+    <div class="topbar">
+      <div class="brand">
+        <h1 id="brand">down<b>the</b>wind</h1>
+        <div class="tag" id="tagline"></div>
+      </div>
+      <div class="langtoggle">
+        <button data-lang="fr">FR</button><button data-lang="en">EN</button>
       </div>
     </div>
-    <button id="backBtn" onclick="backToFrance()">← all runs</button>
-    <div id="spotList"></div>
-    <div id="detail">
-      <h2 id="dName"></h2>
-      <div class="meta" id="dMeta"></div>
-      <div class="kicker">The run</div>
-      <p class="desc" id="dDesc"></p>
-      <div class="kicker">Local knowledge</div>
-      <ul id="dTips"></ul>
-      <div class="fc">
-        <div class="kicker">Downwind window — next 4 days</div>
-        <div class="days" id="fcDays"></div>
-        <div id="readout">hover a cell for details</div>
-        <div class="legend"><span>no-go</span><div class="bar" id="fcLegendBar"></div><span>send it</span></div>
-        <div class="src">AROME model via <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> · night hours dimmed · score = wind speed × direction fit</div>
-      </div>
-    </div>
-    <div class="addrun">
-      <a class="addrun-btn" href="https://github.com/BelCorentin/downthewind.com/issues/new?template=new-run.yml" target="_blank" rel="noopener">➕ Add your run</a>
-      <div class="addrun-note">Runs are reviewed and added by hand — leave your track and comments.</div>
+    <div class="aside-body">
+      <button class="backBtn" id="backBtn" style="display:none"></button>
+      <div id="panel"></div>
     </div>
   </aside>
+
   <div id="mapwrap">
     <div id="map"></div>
     <canvas id="heatCanvas"></canvas>
     <canvas id="overlayCanvas"></canvas>
+
     <div id="layerCtl">
-      <button id="btnWind" onclick="setMode('wind')">💨 wind</button>
-      <button id="btnWaves" onclick="setMode('waves')">🌊 waves</button>
+      <button id="btnWind" onclick="setMode('wind')">💨</button>
+      <button id="btnWaves" onclick="setMode('waves')">🌊</button>
     </div>
+
+    <div id="profileWrap">
+      <svg id="profile" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
     <div id="timeCtl" class="glass">
       <button id="playBtn" onclick="togglePlay()">▶</button>
       <div class="track">
-        <input type="range" id="timeSlider" min="0" max="95" value="0">
+        <input type="range" id="timeSlider" min="0" max="95" value="0" aria-label="forecast hour">
         <div id="dayTicks"></div>
       </div>
       <span id="timeLbl"></span>
     </div>
+
     <div id="ovLegend" class="glass">
-      <div id="ovLegendTitle">wind speed</div>
+      <div id="ovLegendTitle"></div>
       <div class="bar" id="ovLegendBar"></div>
-      <div class="ends"><span id="legLo">0 kn</span><span id="legHi">40+ kn</span></div>
+      <div class="ends"><span id="legLo"></span><span id="legHi"></span></div>
     </div>
-    <footer class="credit">tiles © <a href="https://carto.com/attributions">CARTO</a> · © <a href="https://www.openstreetmap.org/copyright">OSM</a> · forecast © <a href="https://open-meteo.com">Open-Meteo</a></footer>
+
+    <footer class="credit">
+      tiles © <a href="https://carto.com/attributions">CARTO</a> ·
+      © <a href="https://www.openstreetmap.org/copyright">OSM</a> ·
+      © <a href="https://open-meteo.com">Open-Meteo</a>
+    </footer>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="spots.js"></script>
-<script>
-/* ================= Windy-like palettes ================= */
-const WIND_PAL = [                              // kn → rgb
-  [0,[75,95,168]],[6,[61,110,171]],[10,[77,141,133]],[14,[93,164,89]],
-  [18,[147,180,71]],[22,[212,181,62]],[27,[214,139,60]],[33,[207,92,52]],
-  [40,[181,50,89]],[50,[134,50,181]]
-];
-const WAVE_PAL = [                              // m → rgb
-  [0,[40,60,100]],[0.5,[50,90,140]],[1,[60,130,160]],[1.5,[80,170,150]],
-  [2.5,[150,190,90]],[3.5,[215,170,70]],[5,[210,100,60]],[7,[170,50,90]]
-];
-function palColor(pal, v) {                     // → [r,g,b]
-  if (v <= pal[0][0]) return pal[0][1];
-  for (let i = 1; i < pal.length; i++) {
-    if (v <= pal[i][0]) {
-      const [v0, c0] = pal[i - 1], [v1, c1] = pal[i], f = (v - v0) / (v1 - v0);
-      return c0.map((c, k) => Math.round(c + (c1[k] - c) * f));
-    }
-  }
-  return pal[pal.length - 1][1];
-}
-function palCss(pal, v) { const c = palColor(pal, v); return `rgb(${c[0]},${c[1]},${c[2]})`; }
-function palGradientCss(pal, max) {
-  const stops = pal.filter(([v]) => v < max).map(([v, c]) => `rgb(${c[0]},${c[1]},${c[2]}) ${(v / max * 100).toFixed(1)}%`);
-  stops.push(`${palCss(pal, max)} 100%`);
-  return `linear-gradient(to right, ${stops.join(", ")})`;
-}
-
-/* ================= map & spots ================= */
-const FRANCE = { center: [46.4, 2.6], zoom: 6 };
-const map = L.map("map", { zoomControl: true }).setView(FRANCE.center, FRANCE.zoom);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(map);
-
-function levelTag(s) {                          // short tag derived from spots.js level text
-  const t = s.level.split("—")[0].trim();
-  const cls = /expert/i.test(t) ? "lv-expert" : /advanced/i.test(t) ? "lv-adv" : "lv-inter";
-  return { t, cls };
-}
-
-const layers = {}, markers = {};
-for (const s of SPOTS) {
-  const line = L.polyline(s.track, { color: "#8ceedd", weight: 3, opacity: .9, dashArray: "1 7", lineCap: "round" });
-  const start = L.circleMarker(s.track[0], { radius: 6, color: "#8ceedd", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 }).bindTooltip("Start", { direction: "top" });
-  const end = L.circleMarker(s.track.at(-1), { radius: 6, color: "#e8a3ff", fillColor: "#0a0e14", fillOpacity: 1, weight: 2 }).bindTooltip("Finish", { direction: "top" });
-  const grp = L.featureGroup([line, start, end]);
-  grp.on("click", () => select(s.id));
-  layers[s.id] = grp;
-  markers[s.id] = L.marker(s.track[0], {
-    icon: L.divIcon({ className: "spot-icon", html: "🏄", iconSize: [26, 26], iconAnchor: [13, 13] })
-  }).bindTooltip(`${s.name} · ${s.distanceKm} km`, { direction: "top" })
-    .on("click", () => select(s.id)).addTo(map);
-}
-
-const listEl = document.getElementById("spotList");
-listEl.innerHTML = SPOTS.map(s => {
-  const lv = levelTag(s);
-  return `
-  <button class="spot-btn" id="btn-${s.id}" onclick="select('${s.id}')">
-    <div class="top"><div class="n">${s.name}</div><span class="badge ${lv.cls}">${lv.t}</span></div>
-    <div class="a">${s.area} · ${s.distanceKm} km · ${s.windName}</div>
-  </button>`;
-}).join("");
-
-function select(id) {
-  const s = SPOTS.find(x => x.id === id);
-  const lv = levelTag(s);
-  document.querySelectorAll(".spot-btn").forEach(b => b.classList.toggle("active", b.id === "btn-" + id));
-  document.getElementById("detail").style.display = "block";
-  document.getElementById("backBtn").style.display = "block";
-  document.getElementById("dName").textContent = s.name;
-  document.getElementById("dMeta").innerHTML =
-    `<span class="badge ${lv.cls}">${lv.t}</span><br><b>${s.distanceKm} km</b> · ${s.windName}, ${s.wind.idealMin}–${s.wind.idealMax} kn ideal<br>${s.level}`;
-  document.getElementById("dDesc").textContent = s.description;
-  document.getElementById("dTips").innerHTML = s.tips.map(t => `<li>${t}</li>`).join("");
-  Object.values(layers).forEach(l => map.removeLayer(l));
-  layers[id].addTo(map);
-  map.fitBounds(layers[id].getBounds(), { padding: [50, 50] });
-  loadForecast(s);
-}
-function backToFrance() {
-  document.querySelectorAll(".spot-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("detail").style.display = "none";
-  document.getElementById("backBtn").style.display = "none";
-  Object.values(layers).forEach(l => map.removeLayer(l));
-  map.flyTo(FRANCE.center, FRANCE.zoom);
-}
-
-/* ================= weather overlay: color field + wind particles / wave arrows ================= */
-const cv = document.getElementById("overlayCanvas"), ctx = cv.getContext("2d");
-const heatCv = document.getElementById("heatCanvas"), heatCtx = heatCv.getContext("2d");
-const off = document.createElement("canvas"), offCtx = off.getContext("2d");
-let mode = null, hour = 0, playing = false, playTimer = null;
-let windGrid = null, waveGrid = null;   // { lats[], lons[], pts: [ {sp[],dir[],per[]} ] , time[] }
-const GRID_N = 10, BBOX = { lat0: 41.0, lat1: 51.5, lon0: -5.5, lon1: 9.5 };
-
-function gridCoords() {
-  const lats = [], lons = [];
-  for (let i = 0; i < GRID_N; i++) {
-    lats.push(BBOX.lat0 + (BBOX.lat1 - BBOX.lat0) * i / (GRID_N - 1));
-    lons.push(BBOX.lon0 + (BBOX.lon1 - BBOX.lon0) * i / (GRID_N - 1));
-  }
-  const la = [], lo = [];
-  for (const a of lats) for (const o of lons) { la.push(a.toFixed(2)); lo.push(o.toFixed(2)); }
-  return { lats, lons, la, lo };
-}
-
-async function fetchWindGrid() {
-  const g = gridCoords();
-  const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${g.la.join(",")}&longitude=${g.lo.join(",")}` +
-    `&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=4&timezone=UTC`;
-  const arr = await (await fetch(url)).json();
-  return { lats: g.lats, lons: g.lons, time: arr[0].hourly.time,
-    pts: arr.map(p => ({ sp: p.hourly.wind_speed_10m, dir: p.hourly.wind_direction_10m })) };
-}
-async function fetchWaveGrid() {
-  const g = gridCoords();
-  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${g.la.join(",")}&longitude=${g.lo.join(",")}` +
-    `&hourly=wave_height,wave_direction,wave_period&forecast_days=4&timezone=UTC`;
-  const arr = await (await fetch(url)).json();
-  return { lats: g.lats, lons: g.lons, time: arr[0].hourly.time,
-    pts: arr.map(p => ({ sp: p.hourly.wave_height, dir: p.hourly.wave_direction, per: p.hourly.wave_period })) };
-}
-
-// grid cell + bilinear weights at lat/lon (shared by windAt / waveAt)
-function cellWeights(lat, lon) {
-  if (lat < BBOX.lat0 || lat > BBOX.lat1 || lon < BBOX.lon0 || lon > BBOX.lon1) return null;
-  const fi = (lat - BBOX.lat0) / (BBOX.lat1 - BBOX.lat0) * (GRID_N - 1);
-  const fj = (lon - BBOX.lon0) / (BBOX.lon1 - BBOX.lon0) * (GRID_N - 1);
-  const i = Math.min(GRID_N - 2, Math.floor(fi)), j = Math.min(GRID_N - 2, Math.floor(fj));
-  const di = fi - i, dj = fj - j;
-  return [[i, j, (1 - di) * (1 - dj)], [i + 1, j, di * (1 - dj)], [i, j + 1, (1 - di) * dj], [i + 1, j + 1, di * dj]];
-}
-
-// bilinear interpolation of (u, v, speed) at lat/lon for current hour — wind
-function windAt(lat, lon) {
-  const g = windGrid;
-  if (!g) return null;
-  const cw = cellWeights(lat, lon);
-  if (!cw) return null;
-  // interpolate u/v components to avoid 359°→0° seams
-  let u = 0, v = 0;
-  for (const [ii, jj, w] of cw) {
-    const p = g.pts[ii * GRID_N + jj], s = p.sp[hour], d = p.dir[hour] * Math.PI / 180;
-    if (s == null) return null;
-    u += -Math.sin(d) * s * w; v += -Math.cos(d) * s * w;
-  }
-  return { u, v, s: Math.hypot(u, v) };
-}
-// bilinear wave height, tolerant of land (null) corners
-function waveAt(lat, lon) {
-  const g = waveGrid;
-  if (!g) return null;
-  const cw = cellWeights(lat, lon);
-  if (!cw) return null;
-  let sum = 0, wt = 0;
-  for (const [ii, jj, w] of cw) {
-    const hgt = g.pts[ii * GRID_N + jj].sp[hour];
-    if (hgt == null) continue;
-    sum += hgt * w; wt += w;
-  }
-  return wt < 0.25 ? null : sum / wt;
-}
-
-/* ---- Windy-style color field on its own canvas, under particles/arrows ---- */
-function drawHeat() {
-  const w = heatCv.clientWidth, h = heatCv.clientHeight;
-  if (heatCv.width !== w || heatCv.height !== h) { heatCv.width = w; heatCv.height = h; }
-  heatCtx.clearRect(0, 0, w, h);
-  if (!mode || !w || !h) return;
-  const g = mode === "wind" ? windGrid : waveGrid;
-  if (!g) return;
-  const pal = mode === "wind" ? WIND_PAL : WAVE_PAL;
-  const W = 160, H = Math.max(2, Math.round(W * h / w));
-  off.width = W; off.height = H;
-  const img = offCtx.createImageData(W, H);
-  let k = 0;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++, k += 4) {
-      const ll = map.containerPointToLatLng([(x + .5) * w / W, (y + .5) * h / H]);
-      let val;
-      if (mode === "wind") { const f = windAt(ll.lat, ll.lng); val = f ? f.s : null; }
-      else val = waveAt(ll.lat, ll.lng);
-      if (val == null) continue;                 // out of grid / land → transparent
-      const c = palColor(pal, val);
-      img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
-    }
-  }
-  offCtx.putImageData(img, 0, 0);
-  heatCtx.globalAlpha = 0.45;
-  heatCtx.imageSmoothingEnabled = true;
-  heatCtx.drawImage(off, 0, 0, w, h);
-  heatCtx.globalAlpha = 1;
-}
-
-/* ---- particles (white translucent, field colors live in the heat layer) ---- */
-let parts = [];
-function resizeCanvas() {
-  cv.width = cv.clientWidth * devicePixelRatio;
-  cv.height = cv.clientHeight * devicePixelRatio;
-  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  parts = [];
-  drawHeat();
-  if (mode === "waves") drawWaves();
-}
-addEventListener("resize", resizeCanvas);
-map.on("moveend zoomend", () => { parts = []; drawHeat(); if (mode === "waves") drawWaves(); });
-map.on("move zoom", () => { if (mode === "waves") drawWaves(); });
-
-function spawn() {
-  return { x: Math.random() * cv.clientWidth, y: Math.random() * cv.clientHeight, life: 40 + Math.random() * 80 };
-}
-function stepWind() {
-  if (mode !== "wind") return;
-  const w = cv.clientWidth, h = cv.clientHeight;
-  while (parts.length < 1400) parts.push(spawn());
-  // fade previous frame
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.fillStyle = "rgba(0,0,0,0.07)";
-  ctx.fillRect(0, 0, w, h);
-  ctx.globalCompositeOperation = "source-over";
-  for (const p of parts) {
-    const ll = map.containerPointToLatLng([p.x, p.y]);
-    const f = windAt(ll.lat, ll.lng);
-    if (!f || p.life-- < 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) { Object.assign(p, spawn()); continue; }
-    const k = 0.05 + map.getZoom() * 0.012;
-    const nx = p.x + f.u * k, ny = p.y - f.v * k;
-    ctx.strokeStyle = "#ffffff";
-    ctx.globalAlpha = 0.25 + Math.min(0.5, f.s / 70);
-    ctx.lineWidth = 1.1;
-    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(nx, ny); ctx.stroke();
-    p.x = nx; p.y = ny;
-  }
-  ctx.globalAlpha = 1;
-  requestAnimationFrame(stepWind);
-}
-
-function drawWaves() {
-  if (mode !== "waves" || !waveGrid) return;
-  const w = cv.clientWidth, h = cv.clientHeight;
-  ctx.clearRect(0, 0, w, h);
-  const g = waveGrid;
-  for (let i = 0; i < GRID_N; i++) for (let j = 0; j < GRID_N; j++) {
-    const p = g.pts[i * GRID_N + j];
-    const hgt = p.sp[hour];
-    if (hgt == null) continue;                     // land point
-    const pt = map.latLngToContainerPoint([g.lats[i], g.lons[j]]);
-    if (pt.x < -30 || pt.x > w + 30 || pt.y < -30 || pt.y > h + 30) continue;
-    const dir = (p.dir[hour] + 180) * Math.PI / 180;   // travel direction (data = coming-from)
-    const len = 8 + (p.per[hour] || 6) * 1.2;
-    const col = "rgba(240,246,255,.9)";            // arrows on top; color lives in the heat field
-    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; ctx.globalAlpha = .9;
-    const dx = Math.sin(dir) * len, dy = -Math.cos(dir) * len;
-    ctx.beginPath(); ctx.moveTo(pt.x - dx / 2, pt.y - dy / 2); ctx.lineTo(pt.x + dx / 2, pt.y + dy / 2); ctx.stroke();
-    // arrowhead
-    const ang = Math.atan2(dy, dx);
-    ctx.beginPath();
-    ctx.moveTo(pt.x + dx / 2, pt.y + dy / 2);
-    ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang - .4), pt.y + dy / 2 - 6 * Math.sin(ang - .4));
-    ctx.lineTo(pt.x + dx / 2 - 6 * Math.cos(ang + .4), pt.y + dy / 2 - 6 * Math.sin(ang + .4));
-    ctx.fill();
-    ctx.globalAlpha = .4;
-    ctx.beginPath(); ctx.arc(pt.x, pt.y, 2.5 + hgt * 1.5, 0, 7); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-}
-
-async function setMode(m) {
-  if (mode === m) m = null;                        // toggle off
-  mode = m;
-  document.getElementById("btnWind").classList.toggle("on", m === "wind");
-  document.getElementById("btnWaves").classList.toggle("on", m === "waves");
-  document.getElementById("timeCtl").style.display = m ? "flex" : "none";
-  document.getElementById("ovLegend").style.display = m ? "block" : "none";
-  ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
-  parts = [];
-  stopPlay();
-  drawHeat();                                      // clears the field when toggled off
-  if (!m) return;
-  document.getElementById("ovLegendTitle").textContent = m === "wind" ? "wind speed" : "wave height";
-  document.getElementById("legLo").textContent = m === "wind" ? "0 kn" : "0 m";
-  document.getElementById("legHi").textContent = m === "wind" ? "40+ kn" : "5+ m";
-  document.getElementById("ovLegendBar").style.background =
-    m === "wind" ? palGradientCss(WIND_PAL, 40) : palGradientCss(WAVE_PAL, 5);
-  try {
-    if (m === "wind" && !windGrid) windGrid = await fetchWindGrid();
-    if (m === "waves" && !waveGrid) waveGrid = await fetchWaveGrid();
-  } catch (e) {
-    document.getElementById("timeLbl").textContent = "fetch failed";
-    return;
-  }
-  if (mode !== m) return;                          // user toggled meanwhile
-  updateTimeLbl();
-  buildDayTicks();
-  drawHeat();
-  if (m === "wind") requestAnimationFrame(stepWind); else drawWaves();
-}
-
-function updateTimeLbl() {
-  const g = windGrid || waveGrid;
-  if (!g) return;
-  const t = g.time[hour];
-  document.getElementById("timeLbl").textContent =
-    new Date(t + "Z").toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }) + " (Paris)";
-}
-function buildDayTicks() {
-  const g = windGrid || waveGrid;
-  if (!g) return;
-  const days = [];
-  for (const t of g.time) { const d = t.slice(0, 10); if (!days.includes(d)) days.push(d); }
-  document.getElementById("dayTicks").innerHTML = days.map(d =>
-    `<span>${new Date(d + "T12:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })}</span>`).join("");
-}
-document.getElementById("timeSlider").addEventListener("input", e => {
-  hour = +e.target.value; updateTimeLbl();
-  drawHeat();
-  if (mode === "waves") drawWaves();
-});
-function togglePlay() {
-  playing ? stopPlay() : startPlay();
-}
-function startPlay() {
-  playing = true; document.getElementById("playBtn").textContent = "⏸";
-  playTimer = setInterval(() => {
-    hour = (hour + 1) % 96;
-    document.getElementById("timeSlider").value = hour;
-    updateTimeLbl();
-    drawHeat();
-    if (mode === "waves") drawWaves();
-  }, 500);
-}
-function stopPlay() {
-  playing = false; document.getElementById("playBtn").textContent = "▶";
-  clearInterval(playTimer);
-}
-resizeCanvas();
-
-/* ================= per-spot forecast strip ================= */
-document.getElementById("fcLegendBar").style.background = palGradientCss(WIND_PAL, 30);
-
-function dirFactor(dir, w) {
-  const inSector = (a, from, to) => (to - from + 360) % 360 >= (a - from + 360) % 360;
-  if (inSector(dir, w.dirMin, w.dirMax)) return 1;
-  const distTo = (a, b) => Math.min((a - b + 360) % 360, (b - a + 360) % 360);
-  const d = Math.min(distTo(dir, w.dirMin), distTo(dir, w.dirMax));
-  return Math.max(0, 1 - d / 20);
-}
-function speedFactor(kn, w) {
-  if (kn < w.minKn) return 0;
-  if (kn < w.idealMin) return (kn - w.minKn) / (w.idealMin - w.minKn);
-  if (kn <= w.idealMax) return 1;
-  return Math.max(0, 1 - (kn - w.idealMax) / 15);
-}
-async function loadForecast(s) {
-  const mid = s.track[Math.floor(s.track.length / 2)];
-  const key = "fc-" + s.id;
-  let data;
-  const cached = sessionStorage.getItem(key);
-  if (cached && Date.now() - JSON.parse(cached).at < 30 * 60e3) {
-    data = JSON.parse(cached).data;
-  } else {
-    const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${mid[0]}&longitude=${mid[1]}` +
-      `&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn` +
-      `&forecast_days=4&timezone=Europe%2FParis`;
-    try {
-      data = await (await fetch(url)).json();
-      sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
-    } catch (e) {
-      document.getElementById("fcDays").innerHTML =
-        `<div style="color:var(--faint);font-size:.85rem">forecast unavailable (offline?)</div>`;
-      return;
-    }
-  }
-  const H = data.hourly, days = {};
-  H.time.forEach((t, i) => { const d = t.slice(0, 10); (days[d] = days[d] || []).push(i); });
-  const readout = document.getElementById("readout");
-  const fmtDay = d => new Date(d + "T12:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
-  document.getElementById("fcDays").innerHTML = Object.entries(days).map(([day, idxs]) => `
-    <div class="day">
-      <div class="lbl">${fmtDay(day)}</div>
-      <div class="cells">${idxs.map(i => {
-        const kn = H.wind_speed_10m[i], dir = H.wind_direction_10m[i], gust = H.wind_gusts_10m[i];
-        const hr = +H.time[i].slice(11, 13);
-        const score = speedFactor(kn, s.wind) * dirFactor(dir, s.wind);
-        const night = hr < 7 || hr > 21;
-        return `<div class="cell${night ? " night" : ""}" style="background:${palCss(WIND_PAL, score * 30)}"
-          data-info="${H.time[i].replace("T", " ")} — ${Math.round(kn)} kn (gusts ${Math.round(gust)}), ${Math.round(dir)}° · score ${score.toFixed(2)}"></div>`;
-      }).join("")}</div>
-    </div>`).join("");
-  document.querySelectorAll(".cell").forEach(c => {
-    c.addEventListener("pointerenter", () => readout.textContent = c.dataset.info);
-  });
-}
-</script>
+<script src="js/i18n.js"></script>
+<script src="js/geo.js"></script>
+<script src="data/regions.js"></script>
+<script src="data/nodes.js"></script>
+<script src="data/zones.js"></script>
+<script src="data/runs.js"></script>
+<script src="js/forecast.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/map.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/ui.js"></script>
+<script>boot();</script>
 </body>
 </html>
