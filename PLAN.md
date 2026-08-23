@@ -72,6 +72,25 @@ of Nice appearing on a run ending 2.5 km west of it), the Villefranche trap zero
 transit as well as finishes, and the profile strip dropping Agay — the most useful
 bail-out on the coast — because labels were placed left-to-right instead of by importance.
 
+## Community contributions (2026-08-23)
+
+GitHub Issues is the database; the site reads it back through the public API and
+renders it as a map layer. No backend, no accounts, no comment service.
+
+Four contribution types — `danger`, `correction`, `report`, `new-run` — each with its
+own prefilled issue form. Report links from every node, zone and run carry the location
+and the conditions being looked at, so a contributor never has to describe *where* in
+prose. The **`on-map` label is the publish action**: no template declares it, and GitHub
+ignores the `labels=` URL parameter for anyone without triage rights, so nothing reaches
+the map unreviewed. Condition reports grey out after 21 days; danger flags stay until
+closed.
+
+Deliberately not built: per-run comment threads (an empty comment box at this traffic
+makes a site look abandoned), star ratings (a run's quality is set by the conditions,
+which the site already computes), user accounts. If contributors turn out to bounce off
+the GitHub-account requirement, the next step is a serverless form → issue bridge, which
+keeps git as the store and only changes who can write to it.
+
 ## Still open
 
 - **Station service patterns are the one unmeasured field.** Coordinates come from OSM and
@@ -80,5 +99,6 @@ bail-out on the coast — because labels were placed left-to-right instead of by
   (Le Dramont, Anthéor, Le Trayas) are the ones that matter and the ones most likely wrong.
 - `photos: []` is still empty everywhere. What an exit actually looks like from the water
   is probably the single most useful photo this site could carry.
+- The repo needs its labels created before reports can work — see `docs/DATA.md`.
 - Bretagne/Manche and Provence-ouest have runs but almost no nodes and few zones; they are
   migrated, not documented.

@@ -1,0 +1,47 @@
+name: Correction
+description: Something on the site is wrong — an exit, a walk time, a train service
+title: "[fix] "
+labels: ["correction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Station coordinates and walk times are computed from OpenStreetMap, so they are
+        usually right. **Train service frequency and seasonality are not measured** — they
+        are the weakest data on the site and the most useful thing you can fix.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Prefilled if you clicked from the map, e.g. `node:agay`.
+      placeholder: "node:agay"
+    validations:
+      required: true
+  - type: dropdown
+    id: field
+    attributes:
+      label: What is wrong
+      options:
+        - Train service frequency
+        - Train service is seasonal / suspended
+        - Walk time from the water to the station
+        - How hard the exit is
+        - What the shore is made of
+        - Station name or location
+        - The local knowledge for this spot
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: What
+    validations:
+      required: true
+  - type: input
+    id: how do you know
+    attributes:
+      label: How do you know
+      description: "Rode it last week / SNCF timetable / I live here. Needed before this gets merged."
+    validations:
+      required: true

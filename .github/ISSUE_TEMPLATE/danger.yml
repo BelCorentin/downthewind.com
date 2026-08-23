@@ -1,0 +1,60 @@
+name: Danger / hazard
+description: Flag something on the water that people need to know about
+title: "[danger] "
+labels: ["danger"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for anything that could hurt someone: an obstacle in the water, an exit
+        that is no longer usable, a new restriction.
+
+        Flags are reviewed by hand before they appear on the map — a wrong "danger here"
+        is worse than none. If it is urgent and you can reach me directly, do that too.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: >
+        Prefilled if you clicked from the map. Otherwise: a spot name, a `node:agay`
+        style id, or plain coordinates as `43.431, 6.857`.
+      placeholder: "node:agay"
+    validations:
+      required: true
+  - type: dropdown
+    id: hazard
+    attributes:
+      label: What kind
+      options:
+        - Obstacle in the water (net, buoy line, mooring, debris)
+        - Exit no longer usable (fenced, built over, private)
+        - New restriction or ban
+        - Traffic (new lane, new ferry, works)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What is there, how far offshore, how visible is it, how would someone avoid it.
+    validations:
+      required: true
+  - type: input
+    id: seen on
+    attributes:
+      label: Seen on
+      description: Date you saw it (YYYY-MM-DD). Helps decide when the flag is stale.
+      placeholder: "2026-08-23"
+    validations:
+      required: true
+  - type: input
+    id: conditions
+    attributes:
+      label: Conditions
+      description: Prefilled if you clicked from the map. Leave as is.
+  - type: input
+    id: how do you know
+    attributes:
+      label: How do you know
+      description: Saw it yourself, told by the harbour, official notice, local club…

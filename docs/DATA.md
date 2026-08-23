@@ -183,3 +183,67 @@ data/*.js       the content
 
 Load order matters — `map.js` reads `FRANCE_VIEW` and `EFFECT_META`, `profile.js`
 reads `WIND_PAL`. Keep the `<script>` order in `index.html` as it is.
+
+---
+
+## Community reports
+
+GitHub Issues *is* the database. There is no backend, no accounts, no comment
+service — the site reads the repo's issues through the public API and renders
+them on the map.
+
+```
+someone clicks "flag a danger" on the map
+  → a prefilled issue form opens, already carrying the node id and conditions
+  → they submit; the template labels it danger / correction / report
+  → you read it and add the `on-map` label
+  → it appears on the map within 30 minutes (sessionStorage cache TTL)
+```
+
+### The `on-map` label is the publish action
+
+Nothing a stranger writes reaches the map on its own. Two things enforce that:
+
+1. No issue template declares `on-map`.
+2. GitHub ignores the `labels=` URL parameter for anyone without triage rights
+   on the repo, so it cannot be self-applied by editing the link.
+
+To publish a report, label it `on-map`. To unpublish, remove the label or close
+the issue (the query is `state=open&labels=on-map`).
+
+**Labels the repo needs:** `on-map`, `danger`, `correction`, `report`, `new-run`.
+
+```bash
+gh label create on-map     -c 0EA5A4 -d "Published to the map"
+gh label create danger     -c E0555F -d "Hazard flag"
+gh label create correction -c D9C26F -d "Data correction"
+gh label create report     -c 7FE3D2 -d "Condition report"
+gh label create new-run    -c 6FB3D9 -d "Proposed run"
+```
+
+### Report lifetimes
+
+| type | on the map until |
+|---|---|
+| `danger` | you close the issue |
+| `correction` | you close it (ideally after fixing `data/*.js`) |
+| `report` | greyed out after 21 days (`CONDITION_REPORT_FRESH_DAYS`) |
+
+### Locations
+
+The `Where` field accepts `node:agay`, `zone:cap-antibes`, `run:frejus-cannes`,
+or bare `43.431, 6.857`. Anything else still lists, it just does not get a pin.
+Report links from the UI prefill this, so hand-typed locations are the exception.
+
+A report attaches to a run if it names that run, one of its nodes, one of its
+zones, or a coordinate within 4 km of its track.
+
+### Two things to be careful about
+
+- **Issue text is untrusted input from the internet.** It is escaped at every
+  render site, including Leaflet tooltips. The `on-map` label is moderation, not
+  sanitising — keep the escaping if you touch `reportRow` or `drawReports`.
+- **The unauthenticated GitHub API allows 60 requests/hour per IP.** Responses
+  are cached in `sessionStorage` for 30 minutes and a rate-limit failure is
+  swallowed: reports simply do not appear, and the map still works. Never let
+  the reports fetch block the forecast — that is the part people came for.

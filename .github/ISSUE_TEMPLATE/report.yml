@@ -1,0 +1,52 @@
+name: Condition report
+description: You rode it — say how it actually was
+title: "[report] "
+labels: ["report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The site predicts how a run will be. This is how it *was*. Reports are what tell
+        me whether the local-knowledge rules are right, so contradicting the site is
+        useful — say so plainly if it got it wrong.
+
+        Reports fade off the map after about three weeks.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Prefilled if you clicked from the map, e.g. `run:frejus-cannes`.
+      placeholder: "run:frejus-cannes"
+    validations:
+      required: true
+  - type: input
+    id: ridden on
+    attributes:
+      label: Ridden on
+      placeholder: "2026-08-22"
+    validations:
+      required: true
+  - type: input
+    id: conditions
+    attributes:
+      label: Conditions
+      description: Prefilled if you clicked from the map — correct it to what you actually got.
+      placeholder: "W 24 kn, swell WSW 1.4 m"
+  - type: textarea
+    id: how was it
+    attributes:
+      label: How was it
+      description: >
+        Where it worked and where it did not. If a cape, bay or stretch behaved
+        differently from what the site said, that is the most valuable part.
+    validations:
+      required: true
+  - type: dropdown
+    id: gear
+    attributes:
+      label: Gear
+      options:
+        - Wing
+        - SUP-foil / downwind board
+        - Both
+        - Other

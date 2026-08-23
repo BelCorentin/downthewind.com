@@ -39,6 +39,7 @@ const runLayer   = L.layerGroup().addTo(map);   // the selected run's track
 const nodeLayer  = L.layerGroup().addTo(map);   // its nodes
 const zoneLayer  = L.layerGroup().addTo(map);   // its active zones
 const pinLayer   = L.layerGroup().addTo(map);   // overview pins
+const reportLayer = L.layerGroup().addTo(map);  // community reports
 
 const EASE_HEX = {
   easy: "#7fd6a2", ok: "#d9c26f", hard: "#e08a4f", rocky: "#e0555f", none: "#5a6579",
@@ -48,7 +49,28 @@ const EFFECT_HEX = {
   hazard: "#e08a4f", commit: "#b58fd6", trap: "#e0555f", traffic: "#c98fd6",
 };
 
-function clearRunLayers() { [runLayer, nodeLayer, zoneLayer].forEach(l => l.clearLayers()); }
+function clearRunLayers() { [runLayer, nodeLayer, zoneLayer, reportLayer].forEach(l => l.clearLayers()); }
+
+/** Community reports as map pins. Titles are user text — Leaflet tooltips take
+    a string, so escape before handing it over. */
+function drawReports(list, opts = {}) {
+  reportLayer.clearLayers();
+  for (const r of list) {
+    if (!r.where?.ll) continue;
+    const k = REPORT_KINDS[r.type];
+    const stale = isStale(r);
+    L.marker(r.where.ll, {
+      icon: L.divIcon({
+        className: "report-pin",
+        html: `<span style="color:${k.hex};opacity:${stale ? .45 : 1}">${k.icon}</span>`,
+        iconSize: [20, 20], iconAnchor: [10, 10],
+      }),
+      zIndexOffset: r.type === "danger" ? 1000 : 0,
+    }).bindTooltip(esc(r.title), { direction: "top" })
+      .on("click", () => opts.onReport?.(r))
+      .addTo(reportLayer);
+  }
+}
 
 /** Overview: one pin per run, at its start. */
 function drawOverviewPins(runs, onPick) {

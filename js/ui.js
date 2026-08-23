@@ -69,9 +69,13 @@ function showRegion(id) {
   $("backBtn").style.display = "block";
   $("backBtn").textContent = s("allRuns");
   $("backBtn").onclick = showFrance;
+  const regReports = reportsInBBox(reg.bbox).filter(r => r.type !== "report" || !isStale(r));
+  drawReports(regReports, { onReport: r => window.open(r.url, "_blank", "noopener") });
   $("panel").innerHTML = `
     <h2 style="font-size:1.15rem;font-weight:700">${t(reg.name)}</h2>
     <p class="note" style="margin-top:.4rem">${t(reg.blurb)}</p>
+    ${regReports.length ? `<div class="kicker">${s("reports")}</div>
+      ${regReports.slice(0, 6).map(reportRow).join("")}` : ""}
     <div class="kicker">${runs.length} ${s("runsIn")}</div>
     ${runs.map(r => `
       <button class="card" data-run="${r.id}">
@@ -184,6 +188,9 @@ function renderRun() {
     <div class="kicker">${s("localKnow")}</div>
     <ul class="tips">${run.tips.map(x => `<li>${t(x)}</li>`).join("")}</ul>
 
+    <div class="kicker">${s("reports")}</div>
+    <div id="reportBox"></div>
+
     <div class="fc">
       <div class="kicker">${s("window")}</div>
       <div class="days" id="fcDays"></div>
@@ -191,11 +198,15 @@ function renderRun() {
       <div class="legend"><span>${s("noGo")}</span><div class="bar" id="fcLegendBar"></div><span>${s("sendIt")}</span></div>
       <div class="note" style="margin-top:.5rem">${s("srcNote")}</div>
     </div>
+    <div class="kicker">${s("contribute")}</div>
+    <div id="contribBox"></div>
+    <div class="note" style="margin-top:.55rem">${s("contributeNote")}</div>
     ${addRunBlock()}`;
 
   renderConditions(ev);
   renderExits(ev);
   renderForecastStrip(run, ev);
+  renderReports(ev);
   drawProfile(ev, { onNode: focusNode, onZone: focusZone, onHover: hoverNode, highlightId });
 
   $("legFromSel").onchange = e => { legFrom = e.target.value; syncLeg(); };
@@ -309,6 +320,8 @@ function focusNode(id) {
           <dt>${tr.line}</dt><dd>~${tr.freqPerHour}/h${tr.seasonal ? ` · <span style="color:var(--e-shadow)">${s("verify")}</span>` : ""}</dd>
         ` : ""}
       </dl>
+      ${nodeReportsBlock(id)}
+      ${reportLinks({ location: `node:${id}`, context: contextString(evalCache), runName: t(n.name) })}
     </div>`;
   document.querySelectorAll(".exit-row").forEach(r => r.classList.toggle("hi", r.dataset.node === id));
   if (evalCache) {
@@ -316,6 +329,12 @@ function focusNode(id) {
     drawProfile(evalCache, { onNode: focusNode, onZone: focusZone, onHover: hoverNode, highlightId });
   }
   map.panTo(n.ll, { duration: .5 });
+}
+
+function nodeReportsBlock(id) {
+  const list = reportsForNode(id);
+  if (!list.length) return "";
+  return `<div class="node-reports">${list.map(reportRow).join("")}</div>`;
 }
 
 function hoverNode(id) {
@@ -379,6 +398,33 @@ function renderForecastStrip(run, ev) {
   });
 }
 
+/* ---------- community reports ---------- */
+function renderReports(ev) {
+  const box = $("reportBox"), contrib = $("contribBox");
+  if (!box) return;
+  const cum = ev.cum;
+  const list = REPORTS == null ? null : reportsForRun(ev.run, cum);
+
+  if (list == null) {
+    box.innerHTML = `<div class="note">${s("loading")}</div>`;
+  } else if (reportsError) {
+    box.innerHTML = `<div class="note">${s("reportsOff")}</div>`;
+  } else if (!list.length) {
+    box.innerHTML = `<div class="note">${s("noReports")}</div>`;
+  } else {
+    box.innerHTML = list.map(reportRow).join("");
+  }
+
+  if (contrib) {
+    contrib.innerHTML = reportLinks({
+      location: `run:${ev.run.id}`,
+      context: contextString(ev),
+      runName: t(ev.run.name),
+    });
+  }
+  drawReports(list || [], { onReport: r => window.open(r.url, "_blank", "noopener") });
+}
+
 /* ---------- hour changes drive everything ---------- */
 function setHour(h) {
   hour = h;
@@ -422,6 +468,14 @@ function boot() {
   });
 
   resizeCanvas();
+
+  // Reports load in the background: a GitHub rate-limit must never delay or
+  // break the map, which is the part people actually came for.
+  loadReports().then(() => {
+    if (view.kind === "run" && evalCache) renderReports(evalCache);
+    else if (view.kind === "region") showRegion(view.regionId);
+  });
+
   // deep link: #run/frejus-nice or #region/cote-azur
   const [kind, id] = (location.hash || "").replace(/^#/, "").split("/");
   if (kind === "run" && RUN_BY_ID[id]) selectRun(id);
