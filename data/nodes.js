@@ -6,6 +6,9 @@
    ids; nothing here is ever duplicated into a run.
 
    ll         = the shore / water point (where you actually land)
+   offshoreKm = optional. How far offshore the drawn track should pass this
+                point. Only capes need it, and only because "go wide" is the
+                actual advice — the line should show what the rule says.
    short      = label used on the profile strip, where horizontal space is
                 the binding constraint. Explicit, because trimming the full
                 name by rule produced two "Cannes" and two "Nice".
@@ -211,6 +214,7 @@ const NODES = [
     name: { fr: "Pointe du Cap d'Antibes", en: "Cap d'Antibes tip" },
     short: { fr: "Cap d'Antibes", en: "Cap d'Antibes" },
     ll: [43.5480, 7.1230],
+    offshoreKm: 1.4,   // rounded wide: see the cape rule in zones.js
     kind: ["landmark"],
     exit: { ease: "none", shore: "rock", parking: false,
       note: { fr: "Pointe rocheuse, aucune sortie. Point de décision : au large ou pas.",
@@ -333,6 +337,7 @@ const NODES = [
     name: { fr: "Villefranche-sur-Mer", en: "Villefranche-sur-Mer" },
     short: { fr: "Villefranche", en: "Villefranche" },
     ll: [43.7066, 7.3144],
+    offshoreKm: 0.3,    // the run finishes INSIDE the rade — route in, do not pass by
     kind: ["exit", "train", "danger"],
     exit: { ease: "easy", shore: "sand", parking: false,
       note: { fr: "Plage de sable, gare sur le quai — sortie idéale SUR LE PAPIER. Voir l'avertissement « piège » : par mistral, la rade est sans vent et la houle y rentre.",
@@ -347,6 +352,7 @@ const NODES = [
     name: { fr: "Pointe de Saint-Hospice", en: "Cap Ferrat tip" },
     short: { fr: "Cap Ferrat", en: "Cap Ferrat" },
     ll: [43.6862, 7.3390],
+    offshoreKm: 1.0,   // rounded wide: see the cape rule in zones.js
     kind: ["landmark"],
     exit: { ease: "none", shore: "rock", parking: false,
       note: { fr: "Cap boisé et rocheux, aucune sortie. Il ferme la rade de Villefranche par l'est.",
@@ -421,7 +427,8 @@ const NODES = [
     id: "cap-sicie",
     name: { fr: "Cap Sicié", en: "Cap Sicié" },
     short: { fr: "Cap Sicié", en: "Cap Sicié" },
-    ll: [43.0300, 5.8500], kind: ["landmark"],
+    ll: [43.0300, 5.8500], offshoreKm: 1.6,   // rounded wide: see the cape rule in zones.js
+    kind: ["landmark"],
     exit: { ease: "none", shore: "rock", parking: false,
       note: { fr: "Falaises, aucune sortie sur plusieurs kilomètres. Le point d'engagement du run.",
               en: "Cliffs, no exit for several kilometres. The commitment point of the run." } },

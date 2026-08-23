@@ -230,11 +230,10 @@ aside {
 /* ================= map ================= */
 #mapwrap { position:relative; height:100%; overflow:hidden; }
 #map { position:absolute; inset:0; z-index:1; }
+/* the canvases live in the Leaflet "weather" pane, positioned by pinCanvases() */
 #heatCanvas, #overlayCanvas {
-  position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none;
+  position:absolute; top:0; left:0; width:100%; height:100%; display:block; pointer-events:none;
 }
-#heatCanvas { z-index:390; }
-#overlayCanvas { z-index:400; }
 .leaflet-container { background:#070b11; font:inherit; }
 .leaflet-control-attribution { display:none; }
 .leaflet-bar a { background:var(--glass); color:var(--dim); border-color:var(--line); }
@@ -387,3 +386,65 @@ footer.credit a { color:#4b5567; }
 .rep-btn:hover { color:var(--sea-bright); border-color:var(--sea); }
 
 .report-pin { font-size:17px; text-shadow:0 0 5px #000, 0 0 2px #000; text-align:center; line-height:20px; }
+
+/* ================= map polish ================= */
+
+/* the track reads as moving water: a slow dash drifting along the leg */
+.track-flow { animation:trackflow 2.6s linear infinite; }
+@keyframes trackflow { from { stroke-dashoffset:32; } to { stroke-dashoffset:0; } }
+
+.flow-arrow {
+  color:#eafffb; font-size:11px; line-height:16px; text-align:center;
+  text-shadow:0 0 4px #04161c, 0 0 2px #04161c; pointer-events:none;
+}
+.flow-arrow span { display:block; }
+
+.rail-dot {
+  width:7px; height:7px; border-radius:2px; pointer-events:none;
+  background:var(--sea-bright); box-shadow:0 0 0 1.5px #04161c;
+}
+
+.node-hi { filter:drop-shadow(0 0 6px rgba(127,227,210,.85)); }
+
+.endpoint { pointer-events:none; white-space:nowrap; }
+.endpoint .dot {
+  position:absolute; left:-6px; top:-6px; width:12px; height:12px; border-radius:50%;
+  border:2.5px solid #04161c;
+}
+.endpoint.start  .dot { background:var(--sea-bright); }
+.endpoint.finish .dot { background:#e8a3ff; }
+.endpoint .lbl {
+  position:absolute; left:11px; top:-9px;
+  font-size:.6rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
+  padding:.1rem .4rem; border-radius:99px;
+  background:rgba(4,22,28,.82); backdrop-filter:blur(4px);
+}
+.endpoint.start  .lbl { color:var(--sea-bright); }
+.endpoint.finish .lbl { color:#e8a3ff; }
+
+/* leaflet chrome, restyled to match the panels instead of fighting them */
+.leaflet-control-zoom { border:none !important; box-shadow:none !important; }
+.leaflet-control-zoom a {
+  background:var(--glass) !important; color:var(--dim) !important;
+  border:1px solid var(--line) !important; border-radius:9px !important;
+  width:31px !important; height:31px !important; line-height:29px !important;
+  margin-bottom:4px; backdrop-filter:blur(12px);
+}
+.leaflet-control-zoom a:hover { color:var(--sea-bright) !important; border-color:var(--sea) !important; }
+
+.leaflet-tooltip {
+  background:var(--glass) !important; color:var(--fg) !important;
+  border:1px solid var(--line-2) !important; border-radius:8px !important;
+  box-shadow:0 6px 20px rgba(0,0,0,.5) !important;
+  font-size:.76rem !important; padding:.28rem .5rem !important;
+  backdrop-filter:blur(10px);
+}
+.leaflet-tooltip-top:before { border-top-color:var(--line-2) !important; }
+
+/* dim the base tiles a little so the track and field sit on top of them */
+.leaflet-tile-pane { filter:brightness(.82) saturate(.75); }
+
+/* exit-difficulty key, folded into the profile band */
+.map-key { display:flex; flex-wrap:wrap; gap:.15rem .75rem; padding:0 .2rem .3rem; }
+.map-key span { display:flex; align-items:center; gap:.3rem; color:var(--faint); font-size:.66rem; }
+.map-key i { width:8px; height:8px; border-radius:50%; display:block; }

@@ -30,10 +30,28 @@ function palGradientCss(pal, max) {
   return `linear-gradient(to right, ${stops.join(", ")})`;
 }
 
-/* ---- base map ---- */
-const map = L.map("map", { zoomControl: true, attributionControl: false })
+/* ---- base map ----------------------------------------------------
+   Place names used to sit UNDER the wind field and turn to mush. Split
+   the basemap into geometry and labels, and give the weather canvases a
+   Leaflet pane of their own so the labels can be stacked on top:
+
+     tiles 200 → weather 350 → labels 380 → track 400 → markers 600
+
+   The canvases draw in CONTAINER pixels, so they are re-pinned to the
+   container origin on every move; without that they would drift with the
+   pane transform while panning.
+   ------------------------------------------------------------------ */
+const map = L.map("map", { zoomControl: true, attributionControl: false, zoomSnap: 0.5 })
   .setView(FRANCE_VIEW.center, FRANCE_VIEW.zoom);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(map);
+
+map.createPane("weather").style.zIndex = 350;
+map.getPane("weather").style.pointerEvents = "none";
+map.createPane("labels").style.zIndex = 380;
+map.getPane("labels").style.pointerEvents = "none";
+
+const CARTO = "https://{s}.basemaps.cartocdn.com";
+L.tileLayer(`${CARTO}/dark_nolabels/{z}/{x}/{y}{r}.png`, { maxZoom: 19 }).addTo(map);
+L.tileLayer(`${CARTO}/dark_only_labels/{z}/{x}/{y}{r}.png`, { maxZoom: 19, pane: "labels" }).addTo(map);
 
 const runLayer   = L.layerGroup().addTo(map);   // the selected run's track
 const nodeLayer  = L.layerGroup().addTo(map);   // its nodes
@@ -84,23 +102,67 @@ function drawOverviewPins(runs, onPick) {
   }
 }
 
+/** Bearing a→b in degrees, for rotating the flow arrows. */
+function bearing(a, b) {
+  const p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180;
+  const dl = (b[1] - a[1]) * Math.PI / 180;
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+/** Chevrons along the leg. A downwind is directional; the line should say so. */
+function drawFlowArrows(track, cum, kmA, kmB, layer) {
+  const span = kmB - kmA;
+  const n = Math.max(2, Math.min(9, Math.round(span / 6)));
+  for (let i = 1; i <= n; i++) {
+    const km = kmA + span * i / (n + 1);
+    const p = pointAtKm(track, km, cum);
+    const q = pointAtKm(track, Math.min(kmB, km + 0.35), cum);
+    const deg = bearing(p, q);
+    L.marker(p, {
+      interactive: false,
+      icon: L.divIcon({
+        className: "flow-arrow",
+        html: `<span style="transform:rotate(${deg - 90}deg)">➤</span>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      }),
+    }).addTo(layer);
+  }
+}
+
 /** Draw a run: track, active zones, node markers. Returns the bounds. */
 function drawRun(ev, opts = {}) {
   clearRunLayers();
   pinLayer.clearLayers();
   const { run } = ev;
 
-  // full track, dimmed; the selected leg on top
-  L.polyline(run.track, { color: "#7fe3d2", weight: 2.5, opacity: .3, dashArray: "1 6", lineCap: "round" }).addTo(runLayer);
+  // full track, dimmed, so a composed leg still reads against the whole run
+  L.polyline(run.track, { color: "#7fe3d2", weight: 2, opacity: .22, dashArray: "1 7", lineCap: "round" }).addTo(runLayer);
+
   const leg = sliceTrack(run.track, ev.kmA, ev.kmB, ev.cum);
-  L.polyline(leg, { color: "#7fe3d2", weight: 3.5, opacity: .95, lineCap: "round" }).addTo(runLayer);
+  // casing under the line: without it the track disappears into the wind field
+  L.polyline(leg, { color: "#04161c", weight: 8, opacity: .55, lineCap: "round", lineJoin: "round" }).addTo(runLayer);
+  L.polyline(leg, { color: "#7fe3d2", weight: 3.5, opacity: .95, lineCap: "round", lineJoin: "round" }).addTo(runLayer);
+  L.polyline(leg, {
+    color: "#eafffb", weight: 2, opacity: .9, lineCap: "round",
+    dashArray: "2 14", className: "track-flow",
+  }).addTo(runLayer);
+  drawFlowArrows(run.track, ev.cum, ev.kmA, ev.kmB, runLayer);
 
   // zones that are actually firing at this hour
   for (const z of ev.active) {
     if (z.severity === "info" && z.effect !== "boost" && z.effect !== "shelter") continue;
+    const hex = EFFECT_HEX[z.effect], high = z.severity === "high";
+    // soft wide glow + a crisp core, so zones read as areas rather than routes
     L.polyline(z.zone.geom, {
-      color: EFFECT_HEX[z.effect], weight: z.severity === "high" ? 7 : 5,
-      opacity: z.severity === "high" ? .55 : .35, lineCap: "round",
+      color: hex, weight: high ? 22 : 16, opacity: high ? .17 : .1,
+      lineCap: "round", lineJoin: "round", interactive: false,
+    }).addTo(zoneLayer);
+    L.polyline(z.zone.geom, {
+      color: hex, weight: high ? 4 : 3, opacity: high ? .85 : .55,
+      lineCap: "round", lineJoin: "round",
+      dashArray: z.effect === "trap" || z.effect === "hazard" ? null : "6 8",
     }).bindTooltip(`${EFFECT_META[z.effect].icon} ${t(z.zone.name)}`, { direction: "top" })
       .on("click", () => opts.onZone?.(z.zone.id))
       .addTo(zoneLayer);
@@ -109,16 +171,40 @@ function drawRun(ev, opts = {}) {
   // nodes
   for (const n of ev.nodes) {
     const ease = n.node.exit?.ease || "none";
-    const isEnd = n === ev.nodes[0] || n === ev.nodes.at(-1);
-    const m = L.circleMarker(n.node.ll, {
-      radius: n.node.kind.includes("landmark") ? 4 : isEnd ? 7 : 5.5,
+    const isLandmark = n.node.kind.includes("landmark");
+    const hi = n.id === opts.highlightId;
+    const tip = `${t(n.node.name)} · ${n.km.toFixed(1)} km`
+      + (n.node.train ? ` · ${n.node.train.walkMin} min ${s("walk")}` : "");
+    L.circleMarker(n.node.ll, {
+      radius: isLandmark ? 3.5 : hi ? 8 : 6,
       color: EASE_HEX[ease], fillColor: "#070b11", fillOpacity: 1,
-      weight: n.id === opts.highlightId ? 4 : 2.5,
-    }).bindTooltip(
-      `${t(n.node.name)} · ${n.km.toFixed(1)} km` + (n.node.train ? ` · 🚉 ${n.node.train.walkMin} min` : ""),
-      { direction: "top" })
-      .on("click", () => opts.onNode?.(n.id));
-    m.addTo(nodeLayer);
+      weight: hi ? 4 : 2.5, className: hi ? "node-hi" : "",
+    }).bindTooltip(tip, { direction: "top" })
+      .on("click", () => opts.onNode?.(n.id))
+      .addTo(nodeLayer);
+    // a station is the thing people are actually looking for
+    if (n.node.train && !isLandmark) {
+      L.marker(n.node.ll, {
+        interactive: false,
+        icon: L.divIcon({ className: "rail-dot", html: "", iconSize: [7, 7], iconAnchor: [-4, 8] }),
+      }).addTo(nodeLayer);
+    }
+  }
+
+  // start / finish of the selected leg, named so the direction is unambiguous
+  const endpoints = [
+    { km: ev.kmA, cls: "start", label: getLang() === "fr" ? "départ" : "start" },
+    { km: ev.kmB, cls: "finish", label: getLang() === "fr" ? "arrivée" : "finish" },
+  ];
+  for (const e of endpoints) {
+    L.marker(pointAtKm(run.track, e.km, ev.cum), {
+      interactive: false,
+      icon: L.divIcon({
+        className: `endpoint ${e.cls}`,
+        html: `<span class="dot"></span><span class="lbl">${esc(e.label)}</span>`,
+        iconSize: [0, 0], iconAnchor: [0, 0],
+      }),
+    }).addTo(runLayer);
   }
   return L.latLngBounds(run.track.concat(ev.nodes.map(n => n.node.ll)));
 }
@@ -128,6 +214,15 @@ function drawRun(ev, opts = {}) {
    ============================================================ */
 const cv = document.getElementById("overlayCanvas"), ctx = cv.getContext("2d");
 const heatCv = document.getElementById("heatCanvas"), heatCtx = heatCv.getContext("2d");
+map.getPane("weather").appendChild(heatCv);
+map.getPane("weather").appendChild(cv);
+function pinCanvases() {
+  const origin = map.containerPointToLayerPoint([0, 0]);
+  L.DomUtil.setPosition(heatCv, origin);
+  L.DomUtil.setPosition(cv, origin);
+}
+map.on("move zoom moveend zoomend viewreset resize", pinCanvases);
+pinCanvases();
 const off = document.createElement("canvas"), offCtx = off.getContext("2d");
 
 let mode = null, hour = 0, playing = false, playTimer = null;

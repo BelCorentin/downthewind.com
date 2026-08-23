@@ -152,11 +152,40 @@ There is no `distanceKm` — distance is computed from `track`.
 Any pair of a run's nodes is itself a valid leg; the leg picker exposes that. So do
 not author `frejus-theoule` as a separate run.
 
+### Tracks are generated, not hand-drawn
+
+Hand-placed waypoints cut across land — 28 segments were doing it across all six
+runs. Tracks are now produced by `scripts/route-tracks.js`:
+
+```bash
+node scripts/route-tracks.js          # writes scripts/out/tracks.json
+node scripts/check-tracks.js          # independent land-crossing check
+```
+
+It builds a ~100 m raster of the coast from OSM, marks the sea using OSM's rule
+that a coastline way has land on its LEFT, A*-routes between the nodes with a
+clearance preference, then smooths within a corridor without ever crossing land.
+`check-tracks.js` verifies the result a completely different way — segment/segment
+intersection against the raw coastline geometry — so a bug in the raster cannot
+hide a bug in the tracks.
+
+Two knobs, both optional:
+
+| field | on | default | use |
+|---|---|---|---|
+| `offshoreKm` | node | 0.9 | how far off that point the line passes. Raise it at capes that must be rounded wide (Cap d'Antibes 1.4); lower it to route *into* somewhere (Villefranche 0.3) |
+| `smoothKm` | run | 1.2 | smoothing corridor. Lower it when a detour IS the run — `nice-beaulieu` uses 0.45 so the Villefranche dog-leg survives |
+
+A node's own `offshoreKm` is authoritative for its anchor in both directions. Using
+`max(base, node)` meant Villefranche — a bay narrower than the base clearance —
+could never be entered, so the router skipped the bay the whole run is about.
+
 ### After editing, run the checks
 
 ```bash
-node --check data/runs.js                          # syntax
-node /path/to/validate.js                          # node order + zone reachability
+node --check data/runs.js       # syntax
+node scripts/validate.js        # node order, zone reachability, field vocabularies
+node scripts/check-tracks.js    # no track crosses land (needs network)
 ```
 
 Node projections onto the track **must come out monotone**: if a node projects

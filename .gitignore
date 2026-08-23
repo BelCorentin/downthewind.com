@@ -1,0 +1,4 @@
+# Overpass coastline dumps + routed-track output: regenerable build artifacts,
+# and large. Rebuild with scripts/route-tracks.js.
+.cache/
+scripts/out/

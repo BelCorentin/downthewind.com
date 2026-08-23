@@ -29,12 +29,11 @@ const RUNS = [
       "nice-promenade",
     ],
     track: [
-      [43.4180, 6.7500], [43.4100, 6.7700], [43.4060, 6.8080], [43.4080, 6.8440],
-      [43.4180, 6.8580], [43.4260, 6.8950], [43.4450, 6.9200], [43.4750, 6.9400],
-      [43.5050, 6.9500], [43.5200, 6.9600], [43.5350, 6.9900], [43.5450, 7.0200],
-      [43.5420, 7.0480], [43.5450, 7.0750], [43.5560, 7.1000], [43.5450, 7.1080],
-      [43.5350, 7.1250], [43.5520, 7.1420], [43.5800, 7.1360], [43.6100, 7.1420],
-      [43.6350, 7.1580], [43.6520, 7.1880], [43.6500, 7.2200], [43.6800, 7.2600],
+      [43.4102, 6.7566], [43.3984, 6.7703], [43.4020, 6.8570], [43.4183, 6.8979],
+      [43.4464, 6.9351], [43.4898, 6.9686], [43.5079, 6.9686], [43.5142, 6.9562],
+      [43.5395, 6.9934], [43.5305, 7.0206], [43.5296, 7.0466], [43.5603, 7.0987],
+      [43.5296, 7.1037], [43.5314, 7.1495], [43.5657, 7.1619], [43.6209, 7.1458],
+      [43.6462, 7.1693], [43.6372, 7.1917], [43.6399, 7.2214], [43.6851, 7.2648],
     ],
     description: {
       fr: "Le grand parcours de la Côte d'Azur, bout à bout. Départ à la Base Nature de Fréjus, train de houle O–NO le long de l'Esterel rouge, traversée du golfe de La Napoule, Cannes, puis le morceau de bravoure : contourner le cap d'Antibes au large avant la longue glisse dans la baie des Anges. Arrivée sur les galets de Nice. Pour continuer au-delà, voir « Nice → Beaulieu » — et lire l'avertissement sur la rade de Villefranche avant d'y penser.",
@@ -43,8 +42,8 @@ const RUNS = [
     tips: [
       { fr: "Mistral établi, jour 2 ou 3 : la mer a besoin de temps pour s'organiser.",
         en: "Established Mistral, day 2 or 3: the sea needs time to organise." },
-      { fr: "Découpe le run. Fréjus → Cannes (27 km) est déjà une grosse journée ; Cannes → Nice (28 km) est un run à part entière.",
-        en: "Break it up. Fréjus → Cannes (27 km) is already a big day; Cannes → Nice (28 km) is a run in its own right." },
+      { fr: "Découpe le run. Fréjus → Cannes (30 km) est déjà une grosse journée ; Cannes → Nice (39 km) est un run à part entière.",
+        en: "Break it up. Fréjus → Cannes (30 km) is already a big day; Cannes → Nice (39 km) is a run in its own right." },
       { fr: "Logistique : gare-toi à l'arrivée, reviens en TER. La ligne longe la côte et la plupart des gares sont à moins de 10 min de marche de l'eau.",
         en: "Logistics: park at the finish and come back by TER. The line hugs the coast and most stations are under a 10 min walk from the water." },
     ],
@@ -67,9 +66,9 @@ const RUNS = [
       "antheor", "le-trayas", "theoule", "la-napoule", "cannes-bocca", "cannes-midi",
     ],
     track: [
-      [43.4180, 6.7500], [43.4100, 6.7700], [43.4060, 6.8080], [43.4080, 6.8440],
-      [43.4180, 6.8580], [43.4260, 6.8950], [43.4450, 6.9200], [43.4750, 6.9400],
-      [43.5050, 6.9500], [43.5200, 6.9600], [43.5350, 6.9900], [43.5450, 7.0200],
+      [43.4102, 6.7565], [43.3984, 6.7701], [43.4020, 6.8567], [43.4183, 6.8976],
+      [43.4464, 6.9347], [43.4898, 6.9681], [43.5088, 6.9681], [43.5142, 6.9570],
+      [43.5395, 7.0003],
     ],
     description: {
       fr: "Le classique du mistral. Départ à la Base Nature de Fréjus, train de houle O–NO le long des falaises rouges de l'Esterel, arrivée sur le sable à Cannes. Le vent est légèrement offshore dans les baies et accélère autour des caps — les bumps se rangent vraiment après Agay.",
@@ -103,10 +102,10 @@ const RUNS = [
       "nice-airport", "nice-promenade",
     ],
     track: [
-      [43.5450, 7.0200], [43.5420, 7.0480], [43.5450, 7.0750], [43.5560, 7.1000],
-      [43.5450, 7.1080], [43.5350, 7.1250], [43.5520, 7.1420], [43.5800, 7.1360],
-      [43.6100, 7.1420], [43.6350, 7.1580], [43.6520, 7.1880], [43.6500, 7.2200],
-      [43.6800, 7.2600],
+      [43.5383, 6.9997], [43.5310, 7.0208], [43.5301, 7.0270], [43.5301, 7.0468],
+      [43.5600, 7.0989], [43.5292, 7.1064], [43.5310, 7.1486], [43.5645, 7.1622],
+      [43.6224, 7.1473], [43.6459, 7.1684], [43.6368, 7.1920], [43.6396, 7.2218],
+      [43.6857, 7.2677],
     ],
     description: {
       fr: "La seconde moitié de la côte, et un run complet à lui seul. Sortie de Cannes en traversant le chenal de Lérins, baie de Golfe-Juan, puis le cap d'Antibes qu'il faut passer LARGE. Derrière, la baie des Anges offre le plus long fetch dégagé de la côte : c'est là que les bumps sont les plus longs. Arrivée sur les galets de Nice, qui sont plus durs qu'ils n'en ont l'air.",
@@ -126,6 +125,8 @@ const RUNS = [
   {
     id: "nice-beaulieu",
     region: "cote-azur",
+    // the Villefranche detour IS this run — keep the router from smoothing it out
+    smoothKm: 0.45,
     name: { fr: "Nice → Beaulieu", en: "Nice → Beaulieu" },
     windName: { fr: "Mistral (O–NO)", en: "Mistral (W–NW)" },
     wind: { dirMin: 250, dirMax: 320, minKn: 14, idealMin: 18, idealMax: 30 },
@@ -136,8 +137,9 @@ const RUNS = [
     },
     nodes: ["nice-promenade", "nice-port", "villefranche", "cap-ferrat-tip", "beaulieu"],
     track: [
-      [43.6800, 7.2600], [43.6900, 7.2900], [43.6980, 7.3140],
-      [43.6900, 7.3320], [43.6830, 7.3400], [43.6950, 7.3460], [43.7050, 7.3400],
+      [43.6851, 7.2649], [43.6770, 7.3046], [43.6842, 7.3145], [43.6996, 7.3158],
+      [43.6716, 7.3145], [43.6652, 7.3431], [43.6788, 7.3618], [43.6915, 7.3618],
+      [43.6978, 7.3481],
     ],
     description: {
       fr: "Court sur la carte, tordu dans la réalité. On sort de Nice devant le port — gros ferries, à passer au large — puis on longe le mont Boron jusqu'à la rade de Villefranche, qui est le piège le mieux déguisé de la côte : elle a l'air parfaitement orientée et elle est morte par mistral. Passé la rade, il reste à contourner la pointe de Saint-Hospice, elle aussi masquée par vent d'ouest, avant Beaulieu.",
@@ -167,9 +169,9 @@ const RUNS = [
     },
     nodes: ["la-ciotat", "bandol", "sanary", "cap-sicie", "toulon-rade", "almanarre"],
     track: [
-      [43.1650, 5.6100], [43.1400, 5.6600], [43.1180, 5.7220], [43.0950, 5.7900],
-      [43.0300, 5.8500], [43.0400, 5.9300], [43.0300, 6.0200], [43.0450, 6.1000],
-      [43.0750, 6.1480],
+      [43.1526, 5.5929], [43.1038, 5.7835], [43.0866, 5.7405], [43.0712, 5.7405],
+      [43.0323, 5.8253], [43.0287, 6.0738], [43.0188, 6.0873], [43.0070, 6.1488],
+      [43.0296, 6.1845], [43.0631, 6.1636],
     ],
     description: {
       fr: "Un marathon de mistral : sortie de la baie de La Ciotat, Bandol, Sanary, puis le morceau clé — le contournement du cap Sicié, où vent et houle se compriment et où la mer devient franchement grosse — avant la longue glisse à travers la rade de Toulon jusqu'au plan d'eau plat de l'Almanarre.",
@@ -197,8 +199,7 @@ const RUNS = [
     },
     nodes: ["saint-malo", "jersey-st-helier"],
     track: [
-      [48.6550, -2.0200], [48.7200, -2.0400], [48.8300, -2.0600], [48.9600, -2.0900],
-      [49.0800, -2.1000], [49.1600, -2.1150], [49.1780, -2.1100],
+      [48.6615, -2.0365], [49.0142, -2.0311], [49.1625, -2.1336],
     ],
     description: {
       fr: "La grosse : une vraie traversée hauturière du golfe de Saint-Malo, au large des Minquiers, arrivée à St Helier. Sur un flux de S–SO bien établi, le fetch construit des rouleaux métriques que tu enchaînes une heure durant. Les marées ici sont parmi les plus fortes d'Europe et redessinent complètement la route — c'est une expédition, pas une session d'après-boulot.",

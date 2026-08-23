@@ -34,6 +34,7 @@ function drawProfile(ev, opts = {}) {
   const svg = document.getElementById("profile");
   if (!ev || !ev.nodes.length) { wrap.classList.remove("on"); return; }
   wrap.classList.add("on");
+  drawMapKey(ev);
 
   const W = svg.clientWidth || wrap.clientWidth - 20 || 600;
   const x = km => PF.padL + (km / ev.total) * (W - PF.padL - PF.padR);
@@ -140,6 +141,18 @@ function drawProfile(ev, opts = {}) {
   svg.querySelectorAll("[data-zone]").forEach(el => {
     el.addEventListener("click", () => opts.onZone?.(el.dataset.zone));
   });
+}
+
+/** Which exit colours are actually on screen — a key for what is shown. */
+function drawMapKey(ev) {
+  const el = document.getElementById("mapKey");
+  if (!el) return;
+  const present = [...new Set(ev.nodes.map(n => n.node.exit?.ease).filter(Boolean))];
+  const order = ["easy", "ok", "hard", "rocky", "none"];
+  el.innerHTML = order.filter(k => present.includes(k)).map(k =>
+    `<span><i style="background:${EASE_COLOR[k]}"></i>${esc(s("ease", k))}</span>`).join("")
+    + `<span><i style="background:var(--sea-bright);border-radius:2px"></i>${
+        esc(getLang() === "fr" ? "gare" : "station")}</span>`;
 }
 
 function shortName(node) {
