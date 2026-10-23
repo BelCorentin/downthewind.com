@@ -49,9 +49,10 @@ map.getPane("weather").style.pointerEvents = "none";
 map.createPane("labels").style.zIndex = 380;
 map.getPane("labels").style.pointerEvents = "none";
 
-const CARTO = "https://{s}.basemaps.cartocdn.com";
-L.tileLayer(`${CARTO}/dark_nolabels/{z}/{x}/{y}{r}.png`, { maxZoom: 19 }).addTo(map);
-L.tileLayer(`${CARTO}/dark_only_labels/{z}/{x}/{y}{r}.png`, { maxZoom: 19, pane: "labels" }).addTo(map);
+// Carto basemaps now require an API key (tiles render "API KEY REQUIRED"); Esri canvas tiles are keyless.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16 }).addTo(map);
+L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 16, pane: "labels" }).addTo(map);
 
 const runLayer   = L.layerGroup().addTo(map);   // the selected run's track
 const nodeLayer  = L.layerGroup().addTo(map);   // its nodes
